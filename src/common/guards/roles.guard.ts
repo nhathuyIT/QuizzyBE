@@ -7,6 +7,11 @@ import {
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { RoleType } from '../enums/role-type.enum';
+import { CurrentUserPayload } from '../decorators/current-user.decorator';
+
+interface RequestWithUser {
+  user?: CurrentUserPayload;
+}
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -22,8 +27,15 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
-    // TODO(auth): Sau khi JwtAuthGuard gắn request.user, so sánh user.role
-    // với requiredRoles. Hiện tại throw để tránh route tưởng đã bảo mật.
-    throw new ForbiddenException('RolesGuard chưa được cấu hình');
+    const request = context.switchToHttp().getRequest<RequestWithUser>();
+    const user = request.user;
+
+    if (!user || !requiredRoles.includes(user.role)) {
+      throw new ForbiddenException(
+        'Bạn không có quyền truy cập tài nguyên này',
+      );
+    }
+
+    return true;
   }
 }

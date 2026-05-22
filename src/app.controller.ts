@@ -9,4 +9,12 @@ export class AppController {
   getHello(): string {
     return this.appService.getHello();
   }
+  @Get('ping')
+  pingTest() {
+    return {
+      status: 'success',
+      message: 'API is healthy',
+      time: new Date(),
+    };
+  }
 }

@@ -10,6 +10,7 @@ import { CardModule } from './modules/card/card.module';
 import { DeckModule } from './modules/deck/deck.module';
 import { StudyModule } from './modules/study/study.module';
 import { UserModule } from './modules/user/user.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { UserModule } from './modules/user/user.module';
     CardModule,
     StudyModule,
     CardProgressModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [

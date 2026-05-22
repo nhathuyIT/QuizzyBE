@@ -11,15 +11,21 @@ import { MongooseModule } from '@nestjs/mongoose';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const uri =
+        const uri = (
           configService.get<string>('MONGODB_URI') ??
-          configService.get<string>('MONGO_URI');
+          configService.get<string>('MONGO_URI') ??
+          ''
+        ).trim();
 
         if (!uri) {
           throw new Error('Missing MONGODB_URI or MONGO_URI in .env');
         }
 
-        return { uri };
+        return {
+          uri,
+          serverSelectionTimeoutMS: 10000,
+          connectTimeoutMS: 10000,
+        };
       },
     }),
   ],

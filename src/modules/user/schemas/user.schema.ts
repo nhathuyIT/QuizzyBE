@@ -26,7 +26,13 @@ class UserPreferences {
 
 @Schema({ collection: 'users', timestamps: true })
 export class User {
-  @Prop({ required: true, unique: true, trim: true, index: true })
+  @Prop({
+    required: true,
+    unique: true,
+    trim: true,
+    lowercase: true,
+    index: true,
+  })
   email!: string;
 
   @Prop({ required: true })

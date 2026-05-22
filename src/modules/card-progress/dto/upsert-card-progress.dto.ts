@@ -14,11 +14,11 @@ import {
 export class UpsertCardProgressDto {
   @IsMongoId({ message: 'Mã thẻ không hợp lệ' })
   @IsNotEmpty({ message: 'Mã thẻ không được để trống' })
-  cardId: string;
+  cardId!: string;
 
   @IsMongoId({ message: 'Mã bộ bài không hợp lệ' })
   @IsNotEmpty({ message: 'Mã bộ bài không được để trống' })
-  deckId: string;
+  deckId!: string;
 
   @IsInt({ message: 'Mức độ thành thạo phải là số nguyên' })
   @Min(0, { message: 'Mức độ thành thạo tối thiểu là 0' })
@@ -44,7 +44,7 @@ export class UpsertCardProgressDto {
   @Type(() => Date)
   @IsDate({ message: 'Ngày ôn tập tiếp theo không hợp lệ' })
   @IsNotEmpty({ message: 'Ngày ôn tập tiếp theo không được để trống' })
-  dueAt: Date;
+  dueAt!: Date;
 
   @IsInt({ message: 'Số lần đúng phải là số nguyên' })
   @Min(0, { message: 'Số lần đúng không được âm' })

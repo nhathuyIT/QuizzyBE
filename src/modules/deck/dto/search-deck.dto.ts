@@ -1,6 +1,7 @@
-import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { PageOptionsDto } from '../../../common/dto/page-options.dto';
+import { IsEnum, IsOptional, IsString } from 'class-validator';
 
-export class SearchDeckDto {
+export class SearchDeckDto extends PageOptionsDto {
   @IsString({ message: 'Từ khóa tìm kiếm phải là chuỗi ký tự' })
   @IsOptional()
   keyword?: string;
@@ -10,15 +11,4 @@ export class SearchDeckDto {
   })
   @IsOptional()
   visibility?: string;
-
-  @IsInt({ message: 'Số trang phải là số nguyên' })
-  @Min(1, { message: 'Số trang phải lớn hơn hoặc bằng 1' })
-  @IsOptional()
-  page?: number;
-
-  @IsInt({ message: 'Số lượng bản ghi phải là số nguyên' })
-  @Min(1, { message: 'Số lượng bản ghi phải lớn hơn hoặc bằng 1' })
-  @Max(100, { message: 'Số lượng bản ghi tối đa là 100' })
-  @IsOptional()
-  limit?: number;
 }

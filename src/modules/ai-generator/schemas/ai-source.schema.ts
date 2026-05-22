@@ -11,13 +11,13 @@ export class AiSource {
     required: true,
     index: true,
   })
-  userId: Types.ObjectId;
+  userId!: Types.ObjectId;
 
   @Prop({ required: true, enum: ['text', 'pdf', 'url', 'image'] })
-  type: string;
+  type!: string;
 
   @Prop({ required: true })
-  title: string;
+  title!: string;
 
   @Prop()
   rawText?: string;
@@ -29,7 +29,7 @@ export class AiSource {
   extractedText?: string;
 
   @Prop({ default: 'uploaded', enum: ['uploaded', 'parsed', 'failed'] })
-  status: string;
+  status!: string;
 }
 
 export const AiSourceSchema = SchemaFactory.createForClass(AiSource);

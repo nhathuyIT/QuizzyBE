@@ -13,11 +13,11 @@ export class CreateAiSourceAndJobDto {
     message: 'Loại nguồn học liệu không hợp lệ',
   })
   @IsNotEmpty({ message: 'Loại nguồn học liệu không được để trống' })
-  type: string;
+  type!: string;
 
   @IsString({ message: 'Tiêu đề tài liệu phải là chuỗi ký tự' })
   @IsNotEmpty({ message: 'Tiêu đề tài liệu không được để trống' })
-  title: string;
+  title!: string;
 
   @IsString({ message: 'Nội dung văn bản phải là chuỗi ký tự' })
   @IsOptional()

@@ -14,7 +14,7 @@ export class CardProgress {
     required: true,
     index: true,
   })
-  userId: Types.ObjectId;
+  userId!: Types.ObjectId;
 
   @Prop({
     type: MongooseSchema.Types.ObjectId,
@@ -22,7 +22,7 @@ export class CardProgress {
     required: true,
     index: true,
   })
-  cardId: Types.ObjectId;
+  cardId!: Types.ObjectId;
 
   @Prop({
     type: MongooseSchema.Types.ObjectId,
@@ -30,28 +30,28 @@ export class CardProgress {
     required: true,
     index: true,
   })
-  deckId: Types.ObjectId;
+  deckId!: Types.ObjectId;
 
   @Prop({ default: 0, min: 0, max: 100 })
-  mastery: number;
+  mastery!: number;
 
   @Prop({ default: 'new', enum: ['new', 'learning', 'review', 'mastered'] })
-  status: string;
+  status!: string;
 
   @Prop({ default: 2.5 })
-  easeFactor: number;
+  easeFactor!: number;
 
   @Prop({ default: 0 })
-  intervalDays: number;
+  intervalDays!: number;
 
   @Prop({ required: true, type: Date, index: true })
-  dueAt: Date;
+  dueAt!: Date;
 
   @Prop({ default: 0 })
-  correctCount: number;
+  correctCount!: number;
 
   @Prop({ default: 0 })
-  wrongCount: number;
+  wrongCount!: number;
 }
 
 export const CardProgressSchema = SchemaFactory.createForClass(CardProgress);

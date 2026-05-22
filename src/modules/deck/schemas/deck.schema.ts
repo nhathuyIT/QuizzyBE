@@ -6,13 +6,13 @@ export type DeckDocument = Deck & Document;
 @Schema({ collection: 'decks', timestamps: true })
 export class Deck {
   @Prop({ required: true, trim: true })
-  title: string;
+  title!: string;
 
   @Prop()
   description?: string;
 
   @Prop({ default: 'private', enum: ['private', 'link', 'public'] })
-  visibility: string;
+  visibility!: string;
 
   @Prop({
     type: MongooseSchema.Types.ObjectId,
@@ -20,16 +20,16 @@ export class Deck {
     required: true,
     index: true,
   })
-  createdBy: Types.ObjectId;
+  createdBy!: Types.ObjectId;
 
   @Prop({ required: true, default: 'manual', enum: ['manual', 'ai'] })
-  sourceType: string;
+  sourceType!: string;
 
   @Prop({ type: [String], default: [], index: true })
-  tags: string[];
+  tags!: string[];
 
   @Prop({ default: 0 })
-  cardCount: number;
+  cardCount!: number;
 
   @Prop({ type: Date })
   lastStudiedAt?: Date;

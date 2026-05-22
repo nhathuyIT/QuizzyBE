@@ -6,16 +6,16 @@ export type StudySessionDocument = StudySession & Document;
 @Schema({ _id: false })
 class SessionStats {
   @Prop({ default: 0 })
-  correct: number;
+  correct!: number;
 
   @Prop({ default: 0 })
-  wrong: number;
+  wrong!: number;
 
   @Prop({ default: 0 })
-  skipped: number;
+  skipped!: number;
 
   @Prop({ default: 0 })
-  timeSpentSec: number;
+  timeSpentSec!: number;
 }
 
 @Schema({
@@ -29,7 +29,7 @@ export class StudySession {
     required: true,
     index: true,
   })
-  userId: Types.ObjectId;
+  userId!: Types.ObjectId;
 
   @Prop({
     type: MongooseSchema.Types.ObjectId,
@@ -37,10 +37,10 @@ export class StudySession {
     required: true,
     index: true,
   })
-  deckId: Types.ObjectId;
+  deckId!: Types.ObjectId;
 
   @Prop({ required: true, enum: ['flashcard', 'learn', 'test', 'match'] })
-  mode: string;
+  mode!: string;
 
   @Prop({ type: Date })
   finishedAt?: Date;
@@ -49,7 +49,7 @@ export class StudySession {
     type: SessionStats,
     default: () => ({ correct: 0, wrong: 0, skipped: 0, timeSpentSec: 0 }),
   })
-  stats: SessionStats;
+  stats!: SessionStats;
 }
 
 export const StudySessionSchema = SchemaFactory.createForClass(StudySession);

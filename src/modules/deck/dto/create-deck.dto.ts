@@ -9,7 +9,7 @@ import {
 export class CreateDeckDto {
   @IsString({ message: 'Tiêu đề bộ bài phải là một chuỗi ký tự' })
   @IsNotEmpty({ message: 'Tiêu đề bộ học tập không được để trống' })
-  title: string;
+  title!: string;
 
   @IsString({ message: 'Mô tả bộ bài phải là một chuỗi ký tự' })
   @IsOptional()

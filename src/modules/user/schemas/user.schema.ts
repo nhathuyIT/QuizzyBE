@@ -6,10 +6,10 @@ export type UserDocument = User & Document;
 @Schema({ _id: false })
 class StreakInfo {
   @Prop({ default: 0 })
-  current: number;
+  current!: number;
 
   @Prop({ default: 0 })
-  longest: number;
+  longest!: number;
 
   @Prop({ type: Date })
   lastActive?: Date;
@@ -18,43 +18,43 @@ class StreakInfo {
 @Schema({ _id: false })
 class UserPreferences {
   @Prop({ default: 'light', enum: ['light', 'dark'] })
-  theme: string;
+  theme!: string;
 
   @Prop({ default: 'vi', enum: ['vi', 'en'] })
-  language: string;
+  language!: string;
 }
 
 @Schema({ collection: 'users', timestamps: true })
 export class User {
   @Prop({ required: true, unique: true, trim: true, index: true })
-  email: string;
+  email!: string;
 
   @Prop({ required: true })
-  passwordHash: string;
+  passwordHash!: string;
 
   @Prop({ required: true })
-  name: string;
+  name!: string;
 
   @Prop({ default: 'student', enum: ['student', 'teacher', 'admin'] })
-  role: string;
+  role!: string;
 
   @Prop()
   avatarUrl?: string;
 
   @Prop({ default: 0 })
-  totalPoints: number;
+  totalPoints!: number;
 
   @Prop({ type: StreakInfo, default: () => ({ current: 0, longest: 0 }) })
-  streak: StreakInfo;
+  streak!: StreakInfo;
 
   @Prop({
     type: UserPreferences,
     default: () => ({ theme: 'light', language: 'vi' }),
   })
-  preferences: UserPreferences;
+  preferences!: UserPreferences;
 
   @Prop({ default: false })
-  isDeleted: boolean;
+  isDeleted!: boolean;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

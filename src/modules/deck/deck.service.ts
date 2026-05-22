@@ -3,10 +3,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { PageDto } from '../../common/dto/page.dto';
+import { PageMetaDto } from '../../common/dto/page-meta.dto';
 import { CreateDeckDto } from './dto/create-deck.dto';
 import { SearchDeckDto } from './dto/search-deck.dto';
 import { UpdateDeckDto } from './dto/update-deck.dto';
 import { DeckRepository } from './deck.repository';
+import { DeckDocument } from './schemas/deck.schema';
 
 @Injectable()
 export class DeckService {
@@ -17,7 +20,10 @@ export class DeckService {
   }
 
   async searchDecks(searchDeckDto: SearchDeckDto) {
-    return this.deckRepository.search(searchDeckDto);
+    const [decks, itemCount] = await this.deckRepository.search(searchDeckDto);
+    const meta = new PageMetaDto({ pageOptionsDto: searchDeckDto, itemCount });
+
+    return new PageDto<DeckDocument>(decks, meta);
   }
 
   async updateDeck(

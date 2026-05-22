@@ -27,8 +27,10 @@ export class DeckRepository {
     return this.deckModel.findById(id).exec();
   }
 
-  async search(searchDeckDto: SearchDeckDto = {}): Promise<DeckDocument[]> {
-    const { keyword, visibility, page = 1, limit = 20 } = searchDeckDto;
+  async search(
+    searchDeckDto: SearchDeckDto,
+  ): Promise<[DeckDocument[], number]> {
+    const { keyword, visibility } = searchDeckDto;
     const filter: Record<string, unknown> = {};
 
     if (keyword) {
@@ -39,12 +41,13 @@ export class DeckRepository {
       filter.visibility = visibility;
     }
 
-    return this.deckModel
+    const query = this.deckModel
       .find(filter)
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .sort({ updatedAt: -1 })
-      .exec();
+      .skip(searchDeckDto.skip)
+      .limit(searchDeckDto.take)
+      .sort({ updatedAt: searchDeckDto.order === 'ASC' ? 1 : -1 });
+
+    return Promise.all([query.exec(), this.deckModel.countDocuments(filter)]);
   }
 
   async updateById(

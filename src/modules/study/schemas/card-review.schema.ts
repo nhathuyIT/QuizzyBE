@@ -14,25 +14,25 @@ export class CardReview {
     required: true,
     index: true,
   })
-  sessionId: Types.ObjectId;
+  sessionId!: Types.ObjectId;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
-  userId: Types.ObjectId;
+  userId!: Types.ObjectId;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Card', required: true })
-  cardId: Types.ObjectId;
+  cardId!: Types.ObjectId;
 
   @Prop()
   answer?: string;
 
   @Prop({ required: true })
-  isCorrect: boolean;
+  isCorrect!: boolean;
 
   @Prop({ required: true, enum: ['again', 'hard', 'good', 'easy'] })
-  rating: string;
+  rating!: string;
 
   @Prop({ required: true })
-  responseTimeMs: number;
+  responseTimeMs!: number;
 }
 
 export const CardReviewSchema = SchemaFactory.createForClass(CardReview);

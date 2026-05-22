@@ -11,13 +11,13 @@ export class Card {
     required: true,
     index: true,
   })
-  deckId: Types.ObjectId;
+  deckId!: Types.ObjectId;
 
   @Prop({ required: true, trim: true })
-  front: string;
+  front!: string;
 
   @Prop({ required: true, trim: true })
-  back: string;
+  back!: string;
 
   @Prop()
   hint?: string;
@@ -29,10 +29,10 @@ export class Card {
   imageUrl?: string;
 
   @Prop({ type: [String], default: [] })
-  examples: string[];
+  examples!: string[];
 
   @Prop({ required: true, default: 0 })
-  position: number;
+  position!: number;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'AiGenerationJob' })
   aiJobId?: Types.ObjectId;

@@ -25,7 +25,7 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
-  async register(registerDto: RegisterDto): Promise<AuthResponse> {
+  async register(registerDto: RegisterDto): Promise<AuthUserResponse> {
     const email = this.normalizeEmail(registerDto.email);
     const existingUser = await this.userService.findByEmail(email);
 
@@ -41,7 +41,7 @@ export class AuthService {
       role: RoleType.STUDENT,
     });
 
-    return this.buildAuthResponse(user);
+    return this.toAuthUser(user);
   }
 
   async login(loginDto: LoginDto): Promise<AuthResponse> {

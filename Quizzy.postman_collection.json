@@ -1,27 +1,38 @@
 {
   "info": {
     "_postman_id": "8b8dd63f-0a00-4d18-ae93-70c4e85bab4d",
-    "name": "Quizzy",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "52806679",
-    "_collection_link": "https://go.postman.co/collection/52806679-8b8dd63f-0a00-4d18-ae93-70c4e85bab4d?source=collection_link"
+    "name": "Quizzy NestJS API",
+    "description": "Postman collection for the local Quizzy NestJS API.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:3001"
+      "value": "http://localhost:3001",
+      "type": "string"
     },
     {
       "key": "accessToken",
-      "value": ""
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "deckId",
+      "value": "6a0fcaf2c3fe40447786ae90",
+      "type": "string"
+    },
+    {
+      "key": "cardId",
+      "value": "6a0fcaf2c3fe40447786ae93",
+      "type": "string"
     }
   ],
   "item": [
     {
-      "name": "Health",
+      "name": "Health Checks",
       "item": [
         {
-          "name": "Get Hello",
+          "name": "Check API Root",
           "request": {
             "method": "GET",
             "header": [],
@@ -38,7 +49,7 @@
           "response": []
         },
         {
-          "name": "Ping Server",
+          "name": "Check Server Ping",
           "request": {
             "method": "GET",
             "header": [],
@@ -57,21 +68,45 @@
       ]
     },
     {
-      "name": "Auth",
+      "name": "Authentication",
       "item": [
         {
-          "name": "Register",
+          "name": "Register User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('response has success true', function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.eql(true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
-                "value": "application/json"
+                "value": "application/json",
+                "type": "text"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"user{{$timestamp}}@quizzy.local\",\n  \"password\": \"password123\",\n  \"name\": \"Quizzy User\"\n}"
+              "raw": "{\n  \"email\": \"user{{$timestamp}}@quizzy.local\",\n  \"password\": \"password123\",\n  \"name\": \"Quizzy User\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/v1/auth/register",
@@ -85,39 +120,49 @@
               ]
             }
           },
+          "response": []
+        },
+        {
+          "name": "Login User",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Register success', function () {",
-                  "  pm.response.to.have.status(201);",
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
                   "});",
                   "",
                   "const json = pm.response.json();",
                   "if (json?.data?.accessToken) {",
                   "  pm.collectionVariables.set('accessToken', json.data.accessToken);",
-                  "}"
+                  "}",
+                  "",
+                  "pm.test('accessToken is saved', function () {",
+                  "  pm.expect(pm.collectionVariables.get('accessToken')).to.be.a('string').and.not.empty;",
+                  "});"
                 ],
                 "type": "text/javascript"
               }
             }
           ],
-          "response": []
-        },
-        {
-          "name": "Login Seeded Student",
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
-                "value": "application/json"
+                "value": "application/json",
+                "type": "text"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"student@gizmo.local\",\n  \"password\": \"password123\"\n}"
+              "raw": "{\n  \"email\": \"student@gizmo.local\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/v1/auth/login",
@@ -131,36 +176,23 @@
               ]
             }
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Login success', function () {",
-                  "  pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "const json = pm.response.json();",
-                  "if (json?.data?.accessToken) {",
-                  "  pm.collectionVariables.set('accessToken', json.data.accessToken);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
           "response": []
         },
         {
-          "name": "Get Me",
+          "name": "Get Current User",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/v1/auth/me",
               "host": [
@@ -173,19 +205,280 @@
               ]
             }
           },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cards",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{accessToken}}",
+            "type": "string"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "if (!pm.collectionVariables.get('accessToken')) {",
+              "  console.warn('Missing accessToken. Run Auth > POST /v1/auth/login first.');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "Get All Cards",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Get me success', function () {",
+                  "function objectIdToString(value) {",
+                  "  if (!value) return undefined;",
+                  "  if (typeof value === 'string') return value;",
+                  "  if (value.$oid) return value.$oid;",
+                  "  if (value.buffer) {",
+                  "    return Object.keys(value.buffer)",
+                  "      .sort((a, b) => Number(a) - Number(b))",
+                  "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
+                  "      .join('');",
+                  "  }",
+                  "  return undefined;",
+                  "}",
+                  "",
+                  "pm.test('status is 200', function () {",
                   "  pm.response.to.have.status(200);",
-                  "});"
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "const cards = json?.data ?? [];",
+                  "if (cards.length > 0) {",
+                  "  const cardId = objectIdToString(cards[0]._id);",
+                  "  const deckId = objectIdToString(cards[0].deckId);",
+                  "  if (cardId) pm.collectionVariables.set('cardId', cardId);",
+                  "  if (deckId) pm.collectionVariables.set('deckId', deckId);",
+                  "}"
                 ],
                 "type": "text/javascript"
               }
             }
           ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/cards",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "cards"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Card",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "function objectIdToString(value) {",
+                  "  if (!value) return undefined;",
+                  "  if (typeof value === 'string') return value;",
+                  "  if (value.$oid) return value.$oid;",
+                  "  if (value.buffer) {",
+                  "    return Object.keys(value.buffer)",
+                  "      .sort((a, b) => Number(a) - Number(b))",
+                  "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
+                  "      .join('');",
+                  "  }",
+                  "  return undefined;",
+                  "}",
+                  "",
+                  "pm.test('status is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "const cardId = objectIdToString(json?.data?._id);",
+                  "const deckId = objectIdToString(json?.data?.deckId);",
+                  "if (cardId) pm.collectionVariables.set('cardId', cardId);",
+                  "if (deckId) pm.collectionVariables.set('deckId', deckId);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deckId\": \"{{deckId}}\",\n  \"front\": \"Consistent\",\n  \"back\": \"On dinh, nhat quan\",\n  \"hint\": \"Same behavior every time\",\n  \"explanation\": \"A consistent API returns predictable response shapes.\",\n  \"imageUrl\": \"\",\n  \"examples\": [\n    \"Consistent naming makes the code easier to read.\"\n  ],\n  \"position\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/cards",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "cards"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Bulk Cards",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cards\": [\n    {\n      \"deckId\": \"{{deckId}}\",\n      \"front\": \"Resilient\",\n      \"back\": \"Ben bi, khoi phuc tot\",\n      \"hint\": \"Can recover\",\n      \"explanation\": \"A resilient service keeps working after temporary failures.\",\n      \"imageUrl\": \"\",\n      \"examples\": [\n        \"The resilient worker retries failed jobs.\"\n      ],\n      \"position\": 4\n    },\n    {\n      \"deckId\": \"{{deckId}}\",\n      \"front\": \"Concise\",\n      \"back\": \"Ngan gon, suc tich\",\n      \"hint\": \"Short but clear\",\n      \"explanation\": \"Concise code avoids unnecessary noise.\",\n      \"imageUrl\": \"\",\n      \"examples\": [\n        \"A concise function does one thing well.\"\n      ],\n      \"position\": 5\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/cards/bulk",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "cards",
+                "bulk"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Cards By Deck",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/cards/deck/{{deckId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "cards",
+                "deck",
+                "{{deckId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Card By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/cards/{{cardId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "cards",
+                "{{cardId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Card",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hint\": \"Updated hint from Postman\",\n  \"position\": 10,\n  \"examples\": [\n    \"This card was updated from Postman.\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/cards/{{cardId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "cards",
+                "{{cardId}}"
+              ]
+            },
+            "description": "This route needs @Patch(':id') in CardController."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Card",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/cards/{{cardId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "cards",
+                "{{cardId}}"
+              ]
+            },
+            "description": "This route needs @Delete(':id') in CardController and delete logic in service/repository."
+          },
           "response": []
         }
       ]

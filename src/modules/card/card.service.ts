@@ -15,11 +15,23 @@ export class CardService {
   async createBulkCards(createBulkCardsDto: CreateBulkCardsDto) {
     return this.cardRepository.insertMany(createBulkCardsDto.cards);
   }
-
-  async findByDeckId(deckId: string) {
-    return this.cardRepository.findByDeckId(deckId);
+  async findAll() {
+    return this.cardRepository.findAll();
   }
-
+  async findByDeckId(deckId: string) {
+    const deck = await this.cardRepository.findByDeckId(deckId);
+    if (!deck) {
+      throw new NotFoundException('Deck không tồn tại trên hệ thống');
+    }
+    return deck;
+  }
+  async findById(id: string) {
+    const card = await this.cardRepository.findById(id);
+    if (!card) {
+      throw new NotFoundException('Thẻ flashcard không tồn tại trên hệ thống');
+    }
+    return card;
+  }
   async updateCard(id: string, updateCardDto: UpdateCardDto) {
     const card = await this.cardRepository.updateById(id, updateCardDto);
     if (!card) {

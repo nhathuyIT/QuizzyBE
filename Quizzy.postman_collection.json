@@ -210,6 +210,223 @@
       ]
     },
     {
+      "name": "Decks",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{accessToken}}",
+            "type": "string"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "if (!pm.collectionVariables.get('accessToken')) {",
+              "  console.warn('Missing accessToken. Run Authentication > Login User first.');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "Create Deck",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "function objectIdToString(value) {",
+                  "  if (!value) return undefined;",
+                  "  if (typeof value === 'string') return value;",
+                  "  if (value.$oid) return value.$oid;",
+                  "  if (value.buffer) {",
+                  "    return Object.keys(value.buffer)",
+                  "      .sort((a, b) => Number(a) - Number(b))",
+                  "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
+                  "      .join('');",
+                  "  }",
+                  "  return undefined;",
+                  "}",
+                  "",
+                  "pm.test('status is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "const deckId = objectIdToString(json?.data?._id);",
+                  "if (deckId) pm.collectionVariables.set('deckId', deckId);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"English Vocabulary\",\n  \"description\": \"Common English words for software developers\",\n  \"visibility\": \"private\",\n  \"tags\": [\n    \"english\",\n    \"software\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/decks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "decks"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search Decks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "function objectIdToString(value) {",
+                  "  if (!value) return undefined;",
+                  "  if (typeof value === 'string') return value;",
+                  "  if (value.$oid) return value.$oid;",
+                  "  if (value.buffer) {",
+                  "    return Object.keys(value.buffer)",
+                  "      .sort((a, b) => Number(a) - Number(b))",
+                  "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
+                  "      .join('');",
+                  "  }",
+                  "  return undefined;",
+                  "}",
+                  "",
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "const decks = json?.data ?? [];",
+                  "if (decks.length > 0) {",
+                  "  const deckId = objectIdToString(decks[0]._id);",
+                  "  if (deckId) pm.collectionVariables.set('deckId', deckId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/decks?keyword=english&visibility=private&page=1&take=10&order=DESC",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "decks"
+              ],
+              "query": [
+                {
+                  "key": "keyword",
+                  "value": "english"
+                },
+                {
+                  "key": "visibility",
+                  "value": "private"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "take",
+                  "value": "10"
+                },
+                {
+                  "key": "order",
+                  "value": "DESC"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Deck By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/decks/{{deckId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "decks",
+                "{{deckId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Deck",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"English Vocabulary - Updated\",\n  \"description\": \"Updated from Postman\",\n  \"visibility\": \"private\",\n  \"tags\": [\n    \"english\",\n    \"nestjs\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/decks/{{deckId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "decks",
+                "{{deckId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Cards",
       "auth": {
         "type": "bearer",

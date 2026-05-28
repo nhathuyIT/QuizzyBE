@@ -5,6 +5,7 @@ import { CreateDeckDto } from './dto/create-deck.dto';
 import { SearchDeckDto } from './dto/search-deck.dto';
 import { UpdateDeckDto } from './dto/update-deck.dto';
 import { Deck, DeckDocument } from './schemas/deck.schema';
+import { Order } from '../../common/enums/order.enum';
 
 @Injectable()
 export class DeckRepository {
@@ -45,7 +46,7 @@ export class DeckRepository {
       .find(filter)
       .skip(searchDeckDto.skip)
       .limit(searchDeckDto.take)
-      .sort({ updatedAt: searchDeckDto.order === 'ASC' ? 1 : -1 });
+      .sort({ updatedAt: searchDeckDto.order === Order.ASC ? 1 : -1 });
 
     return Promise.all([query.exec(), this.deckModel.countDocuments(filter)]);
   }

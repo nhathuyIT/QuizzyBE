@@ -3,6 +3,7 @@ import { CardService } from './card.service';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { CreateCardDto } from './dto/create-card.dto';
 import { CreateBulkCardsDto } from './dto/create-bulk-cards.dto';
+import { CurrentUser, type CurrentUserPayload } from '../../common/decorators';
 
 @Controller('v1/cards')
 @UseGuards(JwtAuthGuard)
@@ -14,15 +15,21 @@ export class CardController {
     return this.cardService.findAll();
   }
   @Post()
-  createCard(@Body() createCardDto: CreateCardDto) {
-    return this.cardService.createCard(createCardDto);
+  createCard(
+    @Body() createCardDto: CreateCardDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.cardService.createCard(createCardDto, user.id);
   }
   @Post('bulk')
-  createBulkCards(@Body() createBulkCardsDto: CreateBulkCardsDto) {
-    return this.cardService.createBulkCards(createBulkCardsDto);
+  createBulkCards(
+    @Body() createBulkCardsDto: CreateBulkCardsDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.cardService.createBulkCards(createBulkCardsDto, user.id);
   }
-  @Get('deck/:deckID')
-  findByDeckId(@Param('deckID') deckId: string) {
+  @Get('deck/:deckId')
+  findByDeckId(@Param('deckId') deckId: string) {
     return this.cardService.findByDeckId(deckId);
   }
   @Get(':id')

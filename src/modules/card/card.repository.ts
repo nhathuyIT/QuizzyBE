@@ -28,7 +28,9 @@ export class CardRepository {
       })),
     );
   }
-
+  async findAll(): Promise<CardDocument[]> {
+    return this.cardModel.find().exec();
+  }
   async findById(id: string): Promise<CardDocument | null> {
     return this.cardModel.findById(id).exec();
   }

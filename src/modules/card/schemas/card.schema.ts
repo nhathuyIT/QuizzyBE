@@ -34,7 +34,10 @@ export class Card {
   @Prop({ required: true, default: 0 })
   position!: number;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'AiGenerationJob' })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'AiJob',
+  })
   aiJobId?: Types.ObjectId;
 }
 

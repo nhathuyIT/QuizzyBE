@@ -8,6 +8,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { PageDto } from '../dto/page.dto';
 import { PageMetaDto } from '../dto/page-meta.dto';
+import { Types } from 'mongoose';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -72,7 +73,9 @@ export class TransformInterceptor<T> implements NestInterceptor<
     if (Array.isArray(value)) {
       return value.map((item) => this.sanitize(item));
     }
-
+    if (value instanceof Types.ObjectId) {
+      return value.toString();
+    }
     if (value instanceof Date || value === null || typeof value !== 'object') {
       return value;
     }

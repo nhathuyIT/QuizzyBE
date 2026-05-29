@@ -19,9 +19,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
         const expiresIn = configService.get<string>('JWT_EXPIRES_IN') ?? '7d';
 
         return {
-          secret:
-            configService.get<string>('JWT_SECRET') ??
-            'dev-jwt-secret-change-me',
+          secret: configService.get<string>('JWT_SECRET') ?? 'bot',
           signOptions: {
             expiresIn: expiresIn as JwtSignOptions['expiresIn'],
           },

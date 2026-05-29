@@ -25,6 +25,13 @@ export class DeckService {
 
     return new PageDto<DeckDocument>(decks, meta);
   }
+  async findById(id: string) {
+    const deck = await this.deckRepository.findById(id);
+    if (!deck) {
+      throw new NotFoundException('Bộ học tập này không tồn tại trên hệ thống');
+    }
+    return deck;
+  }
 
   async updateDeck(
     deckId: string,
@@ -48,5 +55,8 @@ export class DeckService {
     }
 
     return deck;
+  }
+  async updateCardCount(deckId: string, count: number) {
+    return this.deckRepository.updateCardCount(deckId, count);
   }
 }

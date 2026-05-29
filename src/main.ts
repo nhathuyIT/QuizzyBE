@@ -1,9 +1,13 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { ExpressAdapter } from '@nestjs/platform-express';
+import type { Express } from 'express';
 import { AppModule } from './app.module';
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+export async function createNestApp(server?: Express) {
+  const app = server
+    ? await NestFactory.create(AppModule, new ExpressAdapter(server))
+    : await NestFactory.create(AppModule);
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -12,6 +16,13 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(process.env.PORT ?? 3000);
+  return app;
 }
-void bootstrap();
+
+async function bootstrap() {
+  const app = await createNestApp();
+  await app.listen(process.env.PORT ?? 3001);
+}
+if (!process.env.VERCEL) {
+  void bootstrap();
+}

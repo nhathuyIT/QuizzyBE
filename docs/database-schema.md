@@ -741,3 +741,91 @@ Hãy đảm bảo sau khi chạy ứng dụng, MongoDB Compass của bạn hiể
 | `cards`         | `{ deckId: 1, position: 1 }`                           | Tải mượt danh sách thẻ theo đúng thứ tự        |
 | `card_progress` | `{ userId: 1, cardId: 1 }` (Unique)                    | Bảo vệ toàn vẹn dữ liệu thuật toán SRS         |
 | `card_progress` | `{ userId: 1, deckId: 1, dueAt: 1 }`                   | Lọc chính xác danh sách câu hỏi cần ôn hôm nay |
+
+"// === HỆ THỐNG CƠ SỞ DỮ LIỆU QUIZZY (GIZMO CLONE) ===
+
+Table users {
+\_id objectId [pk]
+name string [note: 'Tên hiển thị']
+email string [unique, note: 'Email đăng nhập']
+passwordHash string [note: 'Mật khẩu đã mã hóa bcrypt']
+role string [note: 'student | teacher | admin']
+avatarUrl string
+createdAt timestamp
+updatedAt timestamp
+}
+
+Table folders {
+\_id objectId [pk]
+userId objectId [note: 'Chủ sở hữu thư mục']
+name string
+description string
+createdAt timestamp
+updatedAt timestamp
+}
+
+Table decks {
+\_id objectId [pk]
+title string
+description string
+visibility string [note: 'public | private']
+createdBy objectId [note: 'User tạo bộ bài']
+folderId objectId [null, note: 'Có thể nằm trong thư mục hoặc không']
+sourceType string [note: 'manual (tự tạo) | ai (AI sinh)']
+cardCount int [note: 'Kỹ thuật Hybrid: Lưu số lượng thẻ để tối ưu tốc độ đọc']
+lastStudiedAt timestamp
+createdAt timestamp
+updatedAt timestamp
+}
+
+Table cards {
+\_id objectId [pk]
+deckId objectId [note: 'Thuộc bộ bài nào']
+front string [note: 'Mặt trước (Từ vựng/Câu hỏi)']
+back string [note: 'Mặt sau (Nghĩa/Đáp án)']
+explanation string [note: 'Giải thích chi tiết/Ví dụ']
+imageUrl string [null]
+position int [note: 'Thứ tự sắp xếp thẻ trong bộ']
+createdAt timestamp
+updatedAt timestamp
+}
+
+Table card_progress {
+\_id objectId [pk]
+userId objectId
+cardId objectId
+deckId objectId
+mastery int [note: 'Độ chín kiến thức (0 -> 100)']
+status string [note: 'learning | review | mastered']
+easeFactor float [note: 'Độ dễ của thẻ phục vụ thuật toán SRS (mặc định 2.5)']
+intervalDays int [note: 'Số ngày hẹn gặp lại thẻ này']
+dueAt timestamp [note: 'Thời gian thẻ hết hạn, cần lôi ra học ngay']
+}
+
+Table study_sessions {
+\_id objectId [pk]
+userId objectId
+deckId objectId
+cardsStudied int [note: 'Số thẻ đã lật trong phiên']
+correctCount int [note: 'Số câu bấm thuộc/dễ']
+score float [note: 'Tỷ lệ phần trăm đúng']
+duration int [note: 'Thời gian học (tính bằng giây)']
+startedAt timestamp
+completedAt timestamp
+}
+
+// === ĐỊNH NGHĨA MỐI QUAN HỆ GIỮA CÁC BẢNG (RELATIONSHIPS) ===
+
+Ref: folders.userId > users.\_id [delete: cascade]
+Ref: decks.createdBy > users.\_id [delete: cascade]
+Ref: decks.folderId > folders.\_id [delete: set null]
+Ref: cards.deckId > decks.\_id [delete: cascade]
+
+// Mối quan hệ phục vụ thuật toán học lặp lại ngắt quãng (SRS)
+Ref: card_progress.userId > users.\_id
+Ref: card_progress.cardId > cards.\_id [delete: cascade]
+Ref: card_progress.deckId > decks.\_id
+
+// Mối quan hệ phục vụ thống kê lịch sử học tập
+Ref: study_sessions.userId > users.\_id
+Ref: study_sessions.deckId > decks.\_id"

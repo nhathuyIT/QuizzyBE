@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateBulkCardsDto } from './dto/create-bulk-cards.dto';
 import { CreateCardDto } from './dto/create-card.dto';
 import { UpdateCardDto } from './dto/update-card.dto';
@@ -23,9 +27,15 @@ export class CardService {
     createBulkCardsDto: CreateBulkCardsDto,
     userId: string,
   ) {
-    const deckId = createBulkCardsDto.cards[0]?.deckId;
+    const deckId = createBulkCardsDto.cards[0].deckId;
     if (!deckId) {
       throw new NotFoundException('Danh sách thẻ trống');
+    }
+    const hasDifferentDecks = createBulkCardsDto.cards.some(
+      (card) => card.deckId !== deckId,
+    );
+    if (hasDifferentDecks) {
+      throw new BadRequestException('Tất cả thẻ phải thuộc cùng một bộ');
     }
     await this.deckService.validateDeckOwner(deckId, userId);
     const cards = await this.cardRepository.insertMany(

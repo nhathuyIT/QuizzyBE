@@ -5,13 +5,14 @@ import { CardRepository } from './card.repository';
 import { CardService } from './card.service';
 import { Card, CardSchema } from './schemas/card.schema';
 import { DeckModule } from '../deck/deck.module';
+import { DeckCardsController } from './deck-cards.controller';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Card.name, schema: CardSchema }]),
     DeckModule,
   ],
-  controllers: [CardController],
+  controllers: [CardController, DeckCardsController],
   providers: [CardService, CardRepository],
   exports: [CardService, CardRepository],
 })

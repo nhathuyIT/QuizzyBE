@@ -50,4 +50,20 @@ export class CardRepository {
       .findByIdAndUpdate(id, updateCardDto, { new: true })
       .exec();
   }
+  async findByDeckIdPaginated(
+    deckId: string,
+    page: number,
+    take: number,
+  ): Promise<[CardDocument[], number]> {
+    const filter = { deckId: new Types.ObjectId(deckId) };
+    const query = this.cardModel
+      .find(filter)
+      .sort({ position: 1 })
+      .skip((page - 1) * take)
+      .limit(take);
+    return Promise.all([
+      query.exec(),
+      this.cardModel.countDocuments(filter).exec(),
+    ]);
+  }
 }

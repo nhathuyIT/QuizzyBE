@@ -10,7 +10,7 @@ Tai lieu nay mo ta luong hoc bai trong Quizzy backend. Ba collection lien quan l
 
 ### study_sessions
 
-Mot document trong `study_sessions` tuong ung voi mot lan user bam vao hoc mot deck.
+Mot document trong `study_sessions` tuong ung vo hoc mooi mot lan user bam vat deck.
 
 Vi du user vao deck "English Vocabulary", chon mode `flashcard`, hoc 10 card, roi bam ket thuc. Toan bo qua trinh do la mot study session.
 

@@ -17,6 +17,11 @@
       "type": "string"
     },
     {
+      "key": "email",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "deckId",
       "value": "6a0fcaf2c3fe40447786ae90",
       "type": "string"
@@ -24,6 +29,11 @@
     {
       "key": "cardId",
       "value": "6a0fcaf2c3fe40447786ae93",
+      "type": "string"
+    },
+    {
+      "key": "studySessionId",
+      "value": "",
       "type": "string"
     }
   ],
@@ -73,6 +83,15 @@
         {
           "name": "Register User",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('email', `user${Date.now()}@quizzy.local`);"
+                ],
+                "type": "text/javascript"
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -305,29 +324,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "function objectIdToString(value) {",
-                  "  if (!value) return undefined;",
-                  "  if (typeof value === 'string') return value;",
-                  "  if (value.$oid) return value.$oid;",
-                  "  if (value.buffer) {",
-                  "    return Object.keys(value.buffer)",
-                  "      .sort((a, b) => Number(a) - Number(b))",
-                  "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
-                  "      .join('');",
-                  "  }",
-                  "  return undefined;",
-                  "}",
-                  "",
                   "pm.test('status is 200', function () {",
                   "  pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "const json = pm.response.json();",
-                  "const decks = json?.data ?? [];",
-                  "if (decks.length > 0) {",
-                  "  const deckId = objectIdToString(decks[0]._id);",
-                  "  if (deckId) pm.collectionVariables.set('deckId', deckId);",
-                  "}"
+                  "});"
                 ],
                 "type": "text/javascript"
               }
@@ -459,31 +458,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "function objectIdToString(value) {",
-                  "  if (!value) return undefined;",
-                  "  if (typeof value === 'string') return value;",
-                  "  if (value.$oid) return value.$oid;",
-                  "  if (value.buffer) {",
-                  "    return Object.keys(value.buffer)",
-                  "      .sort((a, b) => Number(a) - Number(b))",
-                  "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
-                  "      .join('');",
-                  "  }",
-                  "  return undefined;",
-                  "}",
-                  "",
                   "pm.test('status is 200', function () {",
                   "  pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "const json = pm.response.json();",
-                  "const cards = json?.data ?? [];",
-                  "if (cards.length > 0) {",
-                  "  const cardId = objectIdToString(cards[0]._id);",
-                  "  const deckId = objectIdToString(cards[0].deckId);",
-                  "  if (cardId) pm.collectionVariables.set('cardId', cardId);",
-                  "  if (deckId) pm.collectionVariables.set('deckId', deckId);",
-                  "}"
+                  "});"
                 ],
                 "type": "text/javascript"
               }
@@ -642,12 +619,82 @@
             }
           },
           "response": []
-        },
+        }
+      ]
+    },
+    {
+      "name": "Study Flow",
+      "item": [
         {
-          "name": "Update Card",
+          "name": "Study - Start Study Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function objectIdToString(value) {",
+                  "  if (!value) return undefined;",
+                  "  if (typeof value === 'string') return value;",
+                  "  if (value.$oid) return value.$oid;",
+                  "  if (value.buffer) {",
+                  "    return Object.keys(value.buffer)",
+                  "      .sort((a, b) => Number(a) - Number(b))",
+                  "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
+                  "      .join('');",
+                  "  }",
+                  "  return undefined;",
+                  "}",
+                  "",
+                  "function saveFirstDueCard(responseBody) {",
+                  "  const dueCards = responseBody?.data ?? responseBody ?? [];",
+                  "  const firstDueCard = Array.isArray(dueCards) ? dueCards[0] : undefined;",
+                  "  const cardId = objectIdToString(firstDueCard?.cardId ?? firstDueCard?._id);",
+                  "  const deckId = objectIdToString(firstDueCard?.deckId);",
+                  "  if (cardId) pm.collectionVariables.set('cardId', cardId);",
+                  "  if (deckId) pm.collectionVariables.set('deckId', deckId);",
+                  "  return cardId;",
+                  "}",
+                  "",
+                  "const body = pm.response.json();",
+                  "const data = body.data || body;",
+                  "const sessionId = objectIdToString(data?._id);",
+                  "const deckId = objectIdToString(data?.deckId) || pm.collectionVariables.get('deckId');",
+                  "const baseUrl = pm.collectionVariables.get('baseUrl') || pm.environment.get('baseUrl');",
+                  "const accessToken = pm.collectionVariables.get('accessToken') || pm.environment.get('accessToken');",
+                  "if (sessionId) pm.collectionVariables.set('studySessionId', sessionId);",
+                  "if (deckId) pm.collectionVariables.set('deckId', deckId);",
+                  "pm.test('study session created', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(sessionId).to.exist;",
+                  "});",
+                  "",
+                  "if (baseUrl && deckId && accessToken) {",
+                  "  pm.sendRequest({",
+                  "    url: `${baseUrl}/v1/card-progress/decks/${deckId}/due`,",
+                  "    method: 'GET',",
+                  "    header: { Authorization: `Bearer ${accessToken}` },",
+                  "  }, function (err, res) {",
+                  "    if (err) {",
+                  "      console.warn('Could not auto-load due cardId', err);",
+                  "      return;",
+                  "    }",
+                  "    const cardId = saveFirstDueCard(res.json());",
+                  "    if (!cardId) console.warn('No due card found to save as cardId. Create cards for this deck first.');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
-            "method": "PATCH",
+            "method": "POST",
             "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
               {
                 "key": "Content-Type",
                 "value": "application/json",
@@ -656,7 +703,108 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"hint\": \"Updated hint from Postman\",\n  \"position\": 10,\n  \"examples\": [\n    \"This card was updated from Postman.\"\n  ]\n}",
+              "raw": "{\n  \"deckId\": \"{{deckId}}\",\n  \"mode\": \"flashcard\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/study/sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "study",
+                "sessions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Study - Log Card Review",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function objectIdToString(value) {",
+                  "  if (!value) return undefined;",
+                  "  if (typeof value === 'string') return value;",
+                  "  if (value.$oid) return value.$oid;",
+                  "  if (value.buffer) {",
+                  "    return Object.keys(value.buffer)",
+                  "      .sort((a, b) => Number(a) - Number(b))",
+                  "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
+                  "      .join('');",
+                  "  }",
+                  "  return undefined;",
+                  "}",
+                  "",
+                  "pm.test('status is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "const data = json?.data ?? json;",
+                  "const sessionId = objectIdToString(data?.sessionId);",
+                  "const cardId = objectIdToString(data?.cardId);",
+                  "if (sessionId) pm.collectionVariables.set('studySessionId', sessionId);",
+                  "if (cardId) pm.collectionVariables.set('cardId', cardId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answer\": \"my answer\",\n  \"isCorrect\": true,\n  \"rating\": \"good\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/study/reviews",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "study",
+                "reviews"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Card Progress - Upsert Progress",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cardId\": \"{{cardId}}\",\n  \"deckId\": \"{{deckId}}\",\n  \"mastery\": 50,\n  \"status\": \"learning\",\n  \"easeFactor\": 2.5,\n  \"intervalDays\": 1,\n  \"dueAt\": \"{{$isoTimestamp}}\",\n  \"correctCount\": 1,\n  \"wrongCount\": 0\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -664,37 +812,186 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/v1/cards/{{cardId}}",
+              "raw": "{{baseUrl}}/v1/card-progress",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "v1",
-                "cards",
-                "{{cardId}}"
+                "card-progress"
               ]
-            },
-            "description": "This route needs @Patch(':id') in CardController."
+            }
           },
           "response": []
         },
         {
-          "name": "Delete Card",
+          "name": "Card Progress - Get Due Cards",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function objectIdToString(value) {",
+                  "  if (!value) return undefined;",
+                  "  if (typeof value === 'string') return value;",
+                  "  if (value.$oid) return value.$oid;",
+                  "  if (value.buffer) {",
+                  "    return Object.keys(value.buffer)",
+                  "      .sort((a, b) => Number(a) - Number(b))",
+                  "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
+                  "      .join('');",
+                  "  }",
+                  "  return undefined;",
+                  "}",
+                  "",
+                  "function saveFirstDueCard(responseBody) {",
+                  "  const dueCards = responseBody?.data ?? responseBody ?? [];",
+                  "  const firstDueCard = Array.isArray(dueCards) ? dueCards[0] : undefined;",
+                  "  const cardId = objectIdToString(firstDueCard?.cardId ?? firstDueCard?._id);",
+                  "  const deckId = objectIdToString(firstDueCard?.deckId);",
+                  "  if (cardId) pm.collectionVariables.set('cardId', cardId);",
+                  "  if (deckId) pm.collectionVariables.set('deckId', deckId);",
+                  "  return cardId;",
+                  "}",
+                  "",
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const cardId = saveFirstDueCard(pm.response.json());",
+                  "if (!cardId) console.warn('No due card found to save as cardId. Create cards for this deck first.');"
+                ]
+              }
+            }
+          ],
           "request": {
-            "method": "DELETE",
-            "header": [],
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/v1/cards/{{cardId}}",
+              "raw": "{{baseUrl}}/v1/card-progress/decks/{{deckId}}/due",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "v1",
-                "cards",
-                "{{cardId}}"
+                "card-progress",
+                "decks",
+                "{{deckId}}",
+                "due"
               ]
-            },
-            "description": "This route needs @Delete(':id') in CardController and delete logic in service/repository."
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Study - Get Sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/study/sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "study",
+                "sessions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Study - Get Session By Id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/study/sessions/{{studySessionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "study",
+                "sessions",
+                "{{studySessionId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Study - Finish Study Session",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/study/sessions/{{studySessionId}}/finish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "study",
+                "sessions",
+                "{{studySessionId}}",
+                "finish"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Card Progress - Get Deck Progress Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/card-progress/decks/{{deckId}}/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "card-progress",
+                "decks",
+                "{{deckId}}",
+                "summary"
+              ]
+            }
           },
           "response": []
         }

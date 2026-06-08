@@ -5,17 +5,15 @@ import {
 } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { CardProgressService } from '../card-progress/card-progress.service';
-import { CardDocument } from '../card/schemas/card.schema';
 import { DeckDocument } from '../deck/schemas/deck.schema';
 import { CreateStudySessionDto } from './dto/create-study-session.dto';
 import { LogCardReviewDto } from './dto/log-card-review.dto';
-import { StudySessionDocument } from './schemas/study-session.schema';
-import { StudyRepository } from './study.repository';
+import { StudySessionRepository } from './study-session.repository';
 
 @Injectable()
-export class StudyService {
+export class StudySessionService {
   constructor(
-    private readonly studyRepository: StudyRepository,
+    private readonly studySessionRepository: StudySessionRepository,
     private readonly cardProgressService: CardProgressService,
   ) {}
 
@@ -23,10 +21,9 @@ export class StudyService {
     createStudySessionDto: CreateStudySessionDto,
     userId: string,
   ) {
-    const deck = await this.studyRepository.findDeckById(
+    const deck = await this.studySessionRepository.findDeckById(
       createStudySessionDto.deckId,
     );
-
     if (!deck) {
       throw new NotFoundException('Deck not found');
     }
@@ -37,11 +34,14 @@ export class StudyService {
       );
     }
 
-    return this.studyRepository.createSession(createStudySessionDto, userId);
+    return this.studySessionRepository.createSession(
+      createStudySessionDto,
+      userId,
+    );
   }
 
   async findSessions(userId: string) {
-    return this.studyRepository.findSessionsByUser(userId);
+    return this.studySessionRepository.findSessionsByUser(userId);
   }
 
   async findSession(sessionId: string, userId: string) {
@@ -49,27 +49,36 @@ export class StudyService {
   }
 
   async logReview(logCardReviewDto: LogCardReviewDto, userId: string) {
-    const session = await this.getActiveSession(userId);
-    const card = await this.getNextCardForSession(session);
-    const sessionId = this.getDocumentId(session);
-    const cardId = this.getDocumentId(card);
+    const session = await this.getOwnedSession(
+      logCardReviewDto.sessionId,
+      userId,
+    );
+    const card = await this.studySessionRepository.findCardById(
+      logCardReviewDto.cardId,
+    );
 
-    const review = await this.studyRepository.createReview(
+    if (!card) {
+      throw new NotFoundException('Card not found');
+    }
+
+    if (!this.objectIdEquals(card.deckId, session.deckId)) {
+      throw new ForbiddenException('Card does not belong to this session deck');
+    }
+
+    const review = await this.studySessionRepository.createReview(
       logCardReviewDto,
       userId,
-      sessionId,
-      cardId,
     );
 
     await this.cardProgressService.applyReviewProgress({
       userId,
       deckId: session.deckId.toString(),
-      cardId,
+      cardId: logCardReviewDto.cardId,
       isCorrect: logCardReviewDto.isCorrect,
       rating: logCardReviewDto.rating,
     });
-    await this.studyRepository.updateSessionStats(
-      sessionId,
+    await this.studySessionRepository.updateSessionStats(
+      logCardReviewDto.sessionId,
       logCardReviewDto.isCorrect,
     );
 
@@ -83,7 +92,7 @@ export class StudyService {
       0,
       Math.floor((Date.now() - startedAt.getTime()) / 1000),
     );
-    const finishedSession = await this.studyRepository.finishSession(
+    const finishedSession = await this.studySessionRepository.finishSession(
       sessionId,
       timeSpentSec,
     );
@@ -96,7 +105,7 @@ export class StudyService {
   }
 
   private async getOwnedSession(sessionId: string, userId: string) {
-    const session = await this.studyRepository.findSessionById(sessionId);
+    const session = await this.studySessionRepository.findSessionById(sessionId);
 
     if (!session) {
       throw new NotFoundException('Study session not found');
@@ -107,38 +116,6 @@ export class StudyService {
     }
 
     return session;
-  }
-
-  private async getActiveSession(userId: string) {
-    const session = await this.studyRepository.findActiveSessionByUser(userId);
-
-    if (!session) {
-      throw new NotFoundException(
-        'No active study session found. Start a session first.',
-      );
-    }
-
-    return session;
-  }
-
-  private async getNextCardForSession(session: StudySessionDocument) {
-    const reviewedCardIds = await this.studyRepository.findReviewedCardIds(
-      this.getDocumentId(session),
-    );
-    const card = await this.studyRepository.findNextCardInDeck(
-      session.deckId.toString(),
-      reviewedCardIds,
-    );
-
-    if (!card) {
-      throw new NotFoundException('No cards left in this study session');
-    }
-
-    return card;
-  }
-
-  private getDocumentId(document: StudySessionDocument | CardDocument) {
-    return document._id.toString();
   }
 
   private canAccessDeck(deck: DeckDocument, userId: string) {

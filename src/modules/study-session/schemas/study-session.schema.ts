@@ -1,10 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema, Types } from 'mongoose';
 
-export type StudySessionDocument = StudySession & Document;
+export type StudySessionDocument = StudySessionEntity & Document;
 
 @Schema({ _id: false })
-class SessionStats {
+export class StudySessionStats {
   @Prop({ default: 0 })
   correct!: number;
 
@@ -18,11 +18,11 @@ class SessionStats {
   timeSpentSec!: number;
 }
 
-@Schema({
-  collection: 'study_sessions',
-  timestamps: true,
-})
-export class StudySession {
+export const StudySessionStatsSchema =
+  SchemaFactory.createForClass(StudySessionStats);
+
+@Schema({ collection: 'study_sessions', timestamps: true })
+export class StudySessionEntity {
   @Prop({
     type: MongooseSchema.Types.ObjectId,
     ref: 'User',
@@ -39,20 +39,22 @@ export class StudySession {
   })
   deckId!: Types.ObjectId;
 
-  @Prop({ required: true, enum: ['flashcard', 'learn', 'test', 'match'] })
+  @Prop({
+    enum: ['flashcard', 'learn', 'test', 'match'],
+    default: 'flashcard',
+    required: true,
+  })
   mode!: 'flashcard' | 'learn' | 'test' | 'match';
 
   @Prop({ default: Date.now })
   startedAt!: Date;
 
-  @Prop({ type: Date })
+  @Prop()
   finishedAt?: Date;
 
-  @Prop({
-    type: SessionStats,
-    default: () => ({ correct: 0, wrong: 0, skipped: 0, timeSpentSec: 0 }),
-  })
-  stats!: SessionStats;
+  @Prop({ type: StudySessionStatsSchema, default: () => ({}) })
+  stats!: StudySessionStats;
 }
 
-export const StudySessionSchema = SchemaFactory.createForClass(StudySession);
+export const StudySessionSchema =
+  SchemaFactory.createForClass(StudySessionEntity);

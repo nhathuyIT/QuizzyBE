@@ -9,5 +9,5 @@ export class CreateStudySessionDto {
     message: 'Chế độ học không hợp lệ',
   })
   @IsNotEmpty({ message: 'Chế độ học không được để trống' })
-  mode!: string;
+  mode!: 'flashcard' | 'learn' | 'test' | 'match';
 }

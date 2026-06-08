@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -10,6 +11,7 @@ import { SearchDeckDto } from './dto/search-deck.dto';
 import { UpdateDeckDto } from './dto/update-deck.dto';
 import { DeckRepository } from './deck.repository';
 import { DeckDocument } from './schemas/deck.schema';
+import { isMongoId } from '../../common/utils/mongo-id.util';
 
 @Injectable()
 export class DeckService {
@@ -26,6 +28,8 @@ export class DeckService {
     return new PageDto<DeckDocument>(decks, meta);
   }
   async findById(id: string) {
+    this.assertValidDeckId(id);
+
     const deck = await this.deckRepository.findById(id);
     if (!deck) {
       throw new NotFoundException('Bộ học tập này không tồn tại trên hệ thống');
@@ -43,6 +47,8 @@ export class DeckService {
   }
 
   async validateDeckOwner(deckId: string, userId: string) {
+    this.assertValidDeckId(deckId);
+
     const deck = await this.deckRepository.findById(deckId);
     if (!deck) {
       throw new NotFoundException('Bộ học tập này không tồn tại trên hệ thống');
@@ -57,6 +63,14 @@ export class DeckService {
     return deck;
   }
   async updateCardCount(deckId: string, count: number) {
+    this.assertValidDeckId(deckId);
+
     return this.deckRepository.updateCardCount(deckId, count);
+  }
+
+  private assertValidDeckId(deckId: string) {
+    if (!isMongoId(deckId)) {
+      throw new BadRequestException('deckId must be a valid MongoDB ObjectId');
+    }
   }
 }

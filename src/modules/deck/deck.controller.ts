@@ -14,6 +14,7 @@ import { CreateDeckDto } from './dto/create-deck.dto';
 import { SearchDeckDto } from './dto/search-deck.dto';
 import { UpdateDeckDto } from './dto/update-deck.dto';
 import { CurrentUser, type CurrentUserPayload } from '../../common/decorators';
+import { ParseMongoIdPipe } from '../../common/pipes/parse-mongo-id.pipe';
 @Controller('v1/decks')
 @UseGuards(JwtAuthGuard)
 export class DeckController {
@@ -30,12 +31,12 @@ export class DeckController {
     return this.deckService.searchDecks(searchDeckDto);
   }
   @Get(':id')
-  findById(@Param('id') id: string) {
+  findById(@Param('id', new ParseMongoIdPipe()) id: string) {
     return this.deckService.findById(id);
   }
   @Patch(':id')
   update(
-    @Param('id') id: string,
+    @Param('id', new ParseMongoIdPipe()) id: string,
     @Body() updateDeckDto: UpdateDeckDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {

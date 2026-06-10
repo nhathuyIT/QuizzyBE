@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -28,6 +30,7 @@ export class StudyController {
   }
 
   @Post('reviews')
+  @HttpCode(HttpStatus.OK)
   logReview(
     @Body() logCardReviewDto: LogCardReviewDto,
     @CurrentUser('id') userId: string,

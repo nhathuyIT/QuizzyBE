@@ -35,6 +35,11 @@
       "key": "studySessionId",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "reviewId",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -723,6 +728,18 @@
           "name": "Study - Log Card Review",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const missing = ['studySessionId', 'cardId'].filter((key) => !pm.collectionVariables.get(key));",
+                  "if (missing.length) {",
+                  "  console.warn(`Missing ${missing.join(', ')}. Run Study - Start Study Session and Card Progress - Get Due Cards first.`);",
+                  "}"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
@@ -740,15 +757,15 @@
                   "  return undefined;",
                   "}",
                   "",
-                  "pm.test('status is 201', function () {",
-                  "  pm.response.to.have.status(201);",
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
                   "});",
                   "",
                   "const json = pm.response.json();",
                   "const data = json?.data ?? json;",
-                  "const sessionId = objectIdToString(data?.sessionId);",
+                  "const reviewId = objectIdToString(data?.reviewId ?? data?._id);",
                   "const cardId = objectIdToString(data?.cardId);",
-                  "if (sessionId) pm.collectionVariables.set('studySessionId', sessionId);",
+                  "if (reviewId) pm.collectionVariables.set('reviewId', reviewId);",
                   "if (cardId) pm.collectionVariables.set('cardId', cardId);"
                 ]
               }
@@ -770,7 +787,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"answer\": \"my answer\",\n  \"isCorrect\": true,\n  \"rating\": \"good\"\n}"
+              "raw": "{\n  \"sessionId\": \"{{studySessionId}}\",\n  \"cardId\": \"{{cardId}}\",\n  \"userAnswer\": \"On dinh, nhat quan\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/v1/study/reviews",

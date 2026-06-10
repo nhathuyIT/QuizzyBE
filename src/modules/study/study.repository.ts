@@ -111,15 +111,17 @@ export class StudyRepository {
   async createReview(
     logCardReviewDto: LogCardReviewDto,
     userId: string,
-    sessionId: string,
-    cardId: string,
+    isCorrect: boolean,
+    rating: 'again' | 'good',
   ): Promise<CardReviewDocument> {
     return this.cardReviewModel.create({
-      ...logCardReviewDto,
-      responseTimeMs: logCardReviewDto.responseTimeMs ?? 0,
       userId: new Types.ObjectId(userId),
-      sessionId: new Types.ObjectId(sessionId),
-      cardId: new Types.ObjectId(cardId),
+      sessionId: new Types.ObjectId(logCardReviewDto.sessionId),
+      cardId: new Types.ObjectId(logCardReviewDto.cardId),
+      answer: logCardReviewDto.userAnswer,
+      isCorrect,
+      rating,
+      responseTimeMs: 0,
     });
   }
 

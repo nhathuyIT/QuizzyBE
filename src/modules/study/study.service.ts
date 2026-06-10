@@ -1,15 +1,16 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { Types } from 'mongoose';
+import { CardProgressDocument } from '../card-progress/schemas/card-progress.schema';
 import { CardProgressService } from '../card-progress/card-progress.service';
 import { CardDocument } from '../card/schemas/card.schema';
 import { DeckDocument } from '../deck/schemas/deck.schema';
 import { CreateStudySessionDto } from './dto/create-study-session.dto';
 import { LogCardReviewDto } from './dto/log-card-review.dto';
-import { StudySessionDocument } from './schemas/study-session.schema';
 import { StudyRepository } from './study.repository';
 
 @Injectable()
@@ -49,31 +50,54 @@ export class StudyService {
   }
 
   async logReview(logCardReviewDto: LogCardReviewDto, userId: string) {
-    const session = await this.getActiveSession(userId);
-    const card = await this.getNextCardForSession(session);
-    const sessionId = this.getDocumentId(session);
-    const cardId = this.getDocumentId(card);
+    const session = await this.getOwnedSession(
+      logCardReviewDto.sessionId,
+      userId,
+    );
+    const card = await this.studyRepository.findCardById(
+      logCardReviewDto.cardId,
+    );
 
+    if (!card) {
+      throw new NotFoundException('Card not found');
+    }
+
+    if (!this.objectIdEquals(card.deckId, session.deckId)) {
+      throw new ForbiddenException('Card does not belong to this session deck');
+    }
+
+    if (session.finishedAt) {
+      throw new BadRequestException('Study session is already finished');
+    }
+
+    const isCorrect = this.answersMatch(logCardReviewDto.userAnswer, card.back);
+    const rating = isCorrect ? 'good' : 'again';
     const review = await this.studyRepository.createReview(
       logCardReviewDto,
       userId,
-      sessionId,
-      cardId,
+      isCorrect,
+      rating,
     );
-
-    await this.cardProgressService.applyReviewProgress({
+    const progress = await this.cardProgressService.applyReviewProgress({
       userId,
       deckId: session.deckId.toString(),
-      cardId,
-      isCorrect: logCardReviewDto.isCorrect,
-      rating: logCardReviewDto.rating,
+      cardId: logCardReviewDto.cardId,
+      isCorrect,
+      rating,
     });
     await this.studyRepository.updateSessionStats(
-      sessionId,
-      logCardReviewDto.isCorrect,
+      logCardReviewDto.sessionId,
+      isCorrect,
     );
 
-    return review;
+    return {
+      reviewId: this.getDocumentId(review),
+      cardId: logCardReviewDto.cardId,
+      isCorrect,
+      correctAnswer: card.back,
+      explanation: card.explanation,
+      progressUpdate: this.toProgressUpdate(progress),
+    };
   }
 
   async finishSession(sessionId: string, userId: string) {
@@ -109,36 +133,28 @@ export class StudyService {
     return session;
   }
 
-  private async getActiveSession(userId: string) {
-    const session = await this.studyRepository.findActiveSessionByUser(userId);
-
-    if (!session) {
-      throw new NotFoundException(
-        'No active study session found. Start a session first.',
-      );
-    }
-
-    return session;
+  private getDocumentId(document: { _id: unknown }) {
+    return String(document._id);
   }
 
-  private async getNextCardForSession(session: StudySessionDocument) {
-    const reviewedCardIds = await this.studyRepository.findReviewedCardIds(
-      this.getDocumentId(session),
+  private answersMatch(userAnswer: string, correctAnswer: string) {
+    return (
+      this.normalizeAnswer(userAnswer) === this.normalizeAnswer(correctAnswer)
     );
-    const card = await this.studyRepository.findNextCardInDeck(
-      session.deckId.toString(),
-      reviewedCardIds,
-    );
-
-    if (!card) {
-      throw new NotFoundException('No cards left in this study session');
-    }
-
-    return card;
   }
 
-  private getDocumentId(document: StudySessionDocument | CardDocument) {
-    return document._id.toString();
+  private normalizeAnswer(answer: string) {
+    return answer.trim().replace(/\s+/g, ' ').toLowerCase();
+  }
+
+  private toProgressUpdate(progress: CardProgressDocument) {
+    return {
+      status: progress.status,
+      mastery: progress.mastery,
+      easeFactor: progress.easeFactor,
+      intervalDays: progress.intervalDays,
+      dueAt: progress.dueAt,
+    };
   }
 
   private canAccessDeck(deck: DeckDocument, userId: string) {

@@ -11,9 +11,7 @@ describe('StudyService', () => {
     createSession: jest.Mock;
     findSessionsByUser: jest.Mock;
     findSessionById: jest.Mock;
-    findActiveSessionByUser: jest.Mock;
-    findReviewedCardIds: jest.Mock;
-    findNextCardInDeck: jest.Mock;
+    findCardById: jest.Mock;
     createReview: jest.Mock;
     updateSessionStats: jest.Mock;
     finishSession: jest.Mock;
@@ -28,9 +26,7 @@ describe('StudyService', () => {
       createSession: jest.fn(),
       findSessionsByUser: jest.fn(),
       findSessionById: jest.fn(),
-      findActiveSessionByUser: jest.fn(),
-      findReviewedCardIds: jest.fn(),
-      findNextCardInDeck: jest.fn(),
+      findCardById: jest.fn(),
       createReview: jest.fn(),
       updateSessionStats: jest.fn(),
       finishSession: jest.fn(),
@@ -44,11 +40,12 @@ describe('StudyService', () => {
     );
   });
 
-  it('logs review with the active session and next card', async () => {
+  it('checks the answer server-side and returns review progress', async () => {
     const userId = new Types.ObjectId().toString();
     const deckId = new Types.ObjectId();
     const sessionId = new Types.ObjectId();
     const cardId = new Types.ObjectId();
+    const reviewId = new Types.ObjectId();
     const session = {
       _id: sessionId,
       userId: new Types.ObjectId(userId),
@@ -57,36 +54,50 @@ describe('StudyService', () => {
     const card = {
       _id: cardId,
       deckId,
+      back: 'On dinh, nhat quan',
+      explanation: 'A consistent API returns predictable response shapes.',
     };
-    const review = { _id: new Types.ObjectId(), sessionId, cardId };
+    const progress = {
+      status: 'learning',
+      mastery: 65,
+      easeFactor: 2.6,
+      intervalDays: 2,
+      dueAt: new Date('2026-06-10T02:00:00.000Z'),
+    };
 
-    studyRepository.findActiveSessionByUser.mockResolvedValue(session);
-    studyRepository.findReviewedCardIds.mockResolvedValue([]);
-    studyRepository.findNextCardInDeck.mockResolvedValue(card);
-    studyRepository.createReview.mockResolvedValue(review);
-    cardProgressService.applyReviewProgress.mockResolvedValue(undefined);
+    studyRepository.findSessionById.mockResolvedValue(session);
+    studyRepository.findCardById.mockResolvedValue(card);
+    studyRepository.createReview.mockResolvedValue({ _id: reviewId });
+    cardProgressService.applyReviewProgress.mockResolvedValue(progress);
     studyRepository.updateSessionStats.mockResolvedValue(session);
 
     await expect(
       service.logReview(
         {
-          answer: 'my answer',
-          isCorrect: true,
-          rating: 'good',
+          sessionId: sessionId.toString(),
+          cardId: cardId.toString(),
+          userAnswer: ' on dinh, nhat quan ',
         },
         userId,
       ),
-    ).resolves.toBe(review);
+    ).resolves.toEqual({
+      reviewId: reviewId.toString(),
+      cardId: cardId.toString(),
+      isCorrect: true,
+      correctAnswer: card.back,
+      explanation: card.explanation,
+      progressUpdate: progress,
+    });
 
     expect(studyRepository.createReview).toHaveBeenCalledWith(
       {
-        answer: 'my answer',
-        isCorrect: true,
-        rating: 'good',
+        sessionId: sessionId.toString(),
+        cardId: cardId.toString(),
+        userAnswer: ' on dinh, nhat quan ',
       },
       userId,
-      sessionId.toString(),
-      cardId.toString(),
+      true,
+      'good',
     );
     expect(cardProgressService.applyReviewProgress).toHaveBeenCalledWith({
       userId,
@@ -101,11 +112,70 @@ describe('StudyService', () => {
     );
   });
 
-  it('throws when there is no active session', async () => {
-    studyRepository.findActiveSessionByUser.mockResolvedValue(null);
+  it('throws when the session does not exist', async () => {
+    studyRepository.findSessionById.mockResolvedValue(null);
 
     await expect(
-      service.logReview({ isCorrect: true, rating: 'good' }, 'user-id'),
+      service.logReview(
+        {
+          sessionId: new Types.ObjectId().toString(),
+          cardId: new Types.ObjectId().toString(),
+          userAnswer: 'my answer',
+        },
+        'user-id',
+      ),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('marks the answer wrong without trusting the client', async () => {
+    const userId = new Types.ObjectId().toString();
+    const deckId = new Types.ObjectId();
+    const sessionId = new Types.ObjectId();
+    const cardId = new Types.ObjectId();
+
+    studyRepository.findSessionById.mockResolvedValue({
+      _id: sessionId,
+      userId: new Types.ObjectId(userId),
+      deckId,
+    });
+    studyRepository.findCardById.mockResolvedValue({
+      _id: cardId,
+      deckId,
+      back: 'Correct answer',
+    });
+    studyRepository.createReview.mockResolvedValue({
+      _id: new Types.ObjectId(),
+    });
+    cardProgressService.applyReviewProgress.mockResolvedValue({
+      status: 'learning',
+      mastery: 0,
+      easeFactor: 2.5,
+      intervalDays: 0,
+      dueAt: new Date('2026-06-08T00:00:00.000Z'),
+    });
+    studyRepository.updateSessionStats.mockResolvedValue({});
+
+    const result = await service.logReview(
+      {
+        sessionId: sessionId.toString(),
+        cardId: cardId.toString(),
+        userAnswer: 'Wrong answer',
+      },
+      userId,
+    );
+
+    expect(result.isCorrect).toBe(false);
+    expect(studyRepository.createReview).toHaveBeenCalledWith(
+      expect.any(Object),
+      userId,
+      false,
+      'again',
+    );
+    expect(cardProgressService.applyReviewProgress).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isCorrect: false,
+        rating: 'again',
+      }),
+    );
   });
 });

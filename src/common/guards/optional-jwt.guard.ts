@@ -29,7 +29,11 @@ export class OptionalJwtAuthGuard extends AuthGuard('jwt') {
     info: unknown,
   ): TUser | null {
     if (err || info) {
-      throw err || new UnauthorizedException('Invalid token');
+      if (err instanceof Error) {
+        throw err;
+      }
+
+      throw new UnauthorizedException('Invalid token');
     }
 
     return user || null;

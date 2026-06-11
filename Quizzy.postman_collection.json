@@ -344,7 +344,8 @@
                 "v1",
                 "decks"
               ]
-            }
+            },
+            "description": "Protected. Requires Authorization. Creates a deck owned by current user."
           },
           "response": []
         },
@@ -354,18 +355,25 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
                   "pm.test('status is 200', function () {",
                   "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('public search returns paginated response', function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('data');",
+                  "  pm.expect(json).to.have.property('meta');",
                   "});"
-                ],
-                "type": "text/javascript"
+                ]
               }
             }
           ],
           "request": {
             "method": "GET",
             "header": [],
+            "description": "Public. No Authorization header. Returns public/link decks only.",
             "url": {
               "raw": "{{baseUrl}}/v1/decks?keyword=english&page=1&take=10&order=DESC",
               "host": [
@@ -373,7 +381,25 @@
               ],
               "path": [
                 "v1",
-                "decks?keyword=english&page=1&take=10&order=DESC"
+                "decks"
+              ],
+              "query": [
+                {
+                  "key": "keyword",
+                  "value": "english"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "take",
+                  "value": "10"
+                },
+                {
+                  "key": "order",
+                  "value": "DESC"
+                }
               ]
             }
           },
@@ -392,7 +418,7 @@
                   "});",
                   "",
                   "const json = pm.response.json();",
-                  "pm.test('response items include star field when authenticated', function () {",
+                  "pm.test('authenticated search can include star field', function () {",
                   "  const first = json?.data?.[0];",
                   "  if (first) pm.expect(first).to.have.property('star');",
                   "});"
@@ -409,6 +435,7 @@
                 "type": "text"
               }
             ],
+            "description": "Optional-auth endpoint used with Authorization. Can return current user private decks and user-specific star.",
             "url": {
               "raw": "{{baseUrl}}/v1/decks?keyword=english&visibility=private&page=1&take=10&order=DESC",
               "host": [
@@ -445,7 +472,26 @@
           "response": []
         },
         {
-          "name": "Get Deck By Id (With Auth)",
+          "name": "Get My Decks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('response is paginated', function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('data');",
+                  "  pm.expect(json).to.have.property('meta');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -455,6 +501,54 @@
                 "type": "text"
               }
             ],
+            "description": "Protected. Requires Authorization. Returns decks created by current user.",
+            "url": {
+              "raw": "{{baseUrl}}/v1/decks/my?page=1&take=10&order=DESC",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "decks",
+                "my"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "take",
+                  "value": "10"
+                },
+                {
+                  "key": "order",
+                  "value": "DESC"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Deck By Id (Optional Auth)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "Optional auth. Without token reads public/link deck. With token can read own private deck and receive star.",
             "url": {
               "raw": "{{baseUrl}}/v1/decks/{{deckId}}",
               "host": [
@@ -464,6 +558,155 @@
                 "v1",
                 "decks",
                 "{{deckId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Star Deck",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.test('deck is starred', function () {",
+                  "  pm.expect(json?.data?.star).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "description": "Protected. Requires Authorization. Stars this deck for current user.",
+            "url": {
+              "raw": "{{baseUrl}}/v1/decks/{{deckId}}/star",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "decks",
+                "{{deckId}}",
+                "star"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search Starred Decks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.test('starred response is paginated', function () {",
+                  "  pm.expect(json).to.have.property('data');",
+                  "  pm.expect(json).to.have.property('meta');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "description": "Protected. Requires Authorization. Returns decks starred by current user.",
+            "url": {
+              "raw": "{{baseUrl}}/v1/decks/starred?page=1&take=10&order=DESC",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "decks",
+                "starred"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "take",
+                  "value": "10"
+                },
+                {
+                  "key": "order",
+                  "value": "DESC"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Unstar Deck",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.test('deck is unstarred', function () {",
+                  "  pm.expect(json?.data?.star).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "description": "Protected. Requires Authorization. Removes current user star from this deck.",
+            "url": {
+              "raw": "{{baseUrl}}/v1/decks/{{deckId}}/star",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "decks",
+                "{{deckId}}",
+                "star"
               ]
             }
           },
@@ -529,7 +772,7 @@
                 }
               ]
             },
-            "description": "Returns cards inside one deck with pagination. Requires DeckCardsController to be registered in CardModule."
+            "description": "Deck cards endpoint. Check backend auth rules before running; use Authorization if your local Card/Deck cards route is protected."
           },
           "response": []
         },
@@ -568,123 +811,8 @@
                 "decks",
                 "{{deckId}}"
               ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Star Deck",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('status is 200', function () {",
-                  "  pm.response.to.have.status(200);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/v1/decks/{{deckId}}/star",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "decks",
-                "{{deckId}}",
-                "star"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Search Starred Decks",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('status is 200', function () {",
-                  "  pm.response.to.have.status(200);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/v1/decks/starred?page=1&take=10&order=DESC",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "decks",
-                "starred?page=1&take=10&order=DESC"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Unstar Deck",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('status is 200', function () {",
-                  "  pm.response.to.have.status(200);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/v1/decks/{{deckId}}/star",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "decks",
-                "{{deckId}}",
-                "star"
-              ]
-            }
+            },
+            "description": "Protected. Requires Authorization. Only owner can update."
           },
           "response": []
         }

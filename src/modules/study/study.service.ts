@@ -134,9 +134,11 @@ export class StudyService {
 
   async finishSession(sessionId: string, userId: string) {
     const session = await this.getOwnedSession(sessionId, userId);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const startedAt = session.startedAt ?? new Date();
     const timeSpentSec = Math.max(
       0,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       Math.floor((Date.now() - startedAt.getTime()) / 1000),
     );
     const finishedSession = await this.studyRepository.finishSession(

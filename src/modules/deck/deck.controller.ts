@@ -45,6 +45,14 @@ export class DeckController {
   ) {
     return this.deckService.searchStarredDecks(searchDeckDto, user.id);
   }
+  @Get('my')
+  @UseGuards(JwtAuthGuard)
+  findMyDecks(
+    @Query() searchDeckDto: SearchDeckDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.deckService.findMyDecks(searchDeckDto, user.id);
+  }
   @Get(':id')
   @UseGuards(OptionalJwtAuthGuard)
   findById(

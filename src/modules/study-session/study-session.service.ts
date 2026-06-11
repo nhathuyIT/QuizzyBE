@@ -105,7 +105,8 @@ export class StudySessionService {
   }
 
   private async getOwnedSession(sessionId: string, userId: string) {
-    const session = await this.studySessionRepository.findSessionById(sessionId);
+    const session =
+      await this.studySessionRepository.findSessionById(sessionId);
 
     if (!session) {
       throw new NotFoundException('Study session not found');

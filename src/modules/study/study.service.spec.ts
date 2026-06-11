@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { CardProgressService } from '../card-progress/card-progress.service';
+import { StudyItemsBuilder } from './builders/study-item-builder';
 import { StudyRepository } from './study.repository';
 import { StudyService } from './study.service';
 
@@ -19,6 +20,9 @@ describe('StudyService', () => {
   let cardProgressService: {
     applyReviewProgress: jest.Mock;
   };
+  let studyItemsBuilder: {
+    build: jest.Mock;
+  };
 
   beforeEach(() => {
     studyRepository = {
@@ -34,9 +38,13 @@ describe('StudyService', () => {
     cardProgressService = {
       applyReviewProgress: jest.fn(),
     };
+    studyItemsBuilder = {
+      build: jest.fn(),
+    };
     service = new StudyService(
       studyRepository as unknown as StudyRepository,
       cardProgressService as unknown as CardProgressService,
+      studyItemsBuilder as unknown as StudyItemsBuilder,
     );
   });
 

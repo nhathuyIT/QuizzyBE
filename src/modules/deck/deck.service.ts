@@ -42,6 +42,20 @@ export class DeckService {
     return new PageDto<DeckResponse>(data, meta);
   }
 
+  async findMyDecks(searchDeckDto: SearchDeckDto, userId: string) {
+    const [decks, itemCount] = await this.deckRepository.searchByUser(
+      searchDeckDto,
+      userId,
+    );
+    const meta = new PageMetaDto({ pageOptionsDto: searchDeckDto, itemCount });
+    const starredDeckIds = await this.getStarredDeckIds(userId, decks);
+    const data = decks.map((deck) =>
+      this.toDeckResponse(deck, starredDeckIds.has(deck._id.toString())),
+    );
+
+    return new PageDto<DeckResponse>(data, meta);
+  }
+
   async searchStarredDecks(searchDeckDto: SearchDeckDto, userId: string) {
     const [decks, itemCount] = await this.deckRepository.searchStarred(
       userId,
@@ -59,11 +73,7 @@ export class DeckService {
     this.assertValidDeckId(id);
 
     const deck = await this.deckRepository.findById(id);
-    if (!deck) {
-      throw new NotFoundException('Deck not found');
-    }
-
-    if (!this.canReadDeck(deck, userId)) {
+    if (!deck || !this.canReadDeck(deck, userId)) {
       throw new NotFoundException('Deck not found');
     }
 

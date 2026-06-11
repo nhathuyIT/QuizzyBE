@@ -146,6 +146,21 @@ Muon co token thi goi Login.
 
 ## 5. Deck Flow
 
+Trong Postman hien tai folder `Decks` nen co du cac request sau:
+
+```text
+Create Deck
+Search Decks (Public - No Auth)
+Search Decks (With Auth)
+Get My Decks
+Get Deck By Id (Optional Auth)
+Star Deck
+Search Starred Decks
+Unstar Deck
+Get Deck Cards Paginated
+Update Deck
+```
+
 ### 5.1 Create Deck
 
 Request:
@@ -172,22 +187,40 @@ Postman se tu luu:
 deckId
 ```
 
-### 5.2 Search Decks
+### 5.2 Search Decks Public - No Auth
 
-Request co the chay khong token:
+Request nay khong gui Authorization:
 
 ```http
-GET {{baseUrl}}/v1/decks?page=1&take=10&order=DESC
+GET {{baseUrl}}/v1/decks?keyword=english&page=1&take=10&order=DESC
+```
+
+Ket qua mong doi:
+
+```text
+Chi thay deck public/link.
+Khong thay private deck cua user.
+Response item khong bat buoc co field star vi request khong co user context.
+```
+
+### 5.3 Search Decks With Auth
+
+Request nay gui Bearer token:
+
+```http
+GET {{baseUrl}}/v1/decks?keyword=english&visibility=private&page=1&take=10&order=DESC
+Authorization: Bearer {{accessToken}}
 ```
 
 Quy tac:
 
 ```text
-Khong token: chi thay deck public/link.
-Co token: thay deck public/link + private deck cua chinh user.
+Thay deck public/link + private deck cua chinh user.
+Neu filter visibility=private thi chi private deck ma user duoc phep thay.
+Moi item nen co field star theo user dang login.
 ```
 
-Neu co token, response moi deck co:
+Ket qua item can co:
 
 ```json
 {
@@ -195,7 +228,47 @@ Neu co token, response moi deck co:
 }
 ```
 
-### 5.3 Star Deck
+### 5.4 Get My Decks
+
+Request:
+
+```http
+GET {{baseUrl}}/v1/decks/my?page=1&take=10&order=DESC
+Authorization: Bearer {{accessToken}}
+```
+
+Ket qua mong doi:
+
+```text
+Chi tra deck do user dang login tao.
+Moi item co field star.
+```
+
+### 5.5 Get Deck By Id Optional Auth
+
+Request khong token:
+
+```http
+GET {{baseUrl}}/v1/decks/{{deckId}}
+```
+
+Request co token:
+
+```http
+GET {{baseUrl}}/v1/decks/{{deckId}}
+Authorization: Bearer {{accessToken}}
+```
+
+Quy tac:
+
+```text
+Deck public/link: ai cung xem duoc.
+Private deck: chi owner xem duoc.
+Co token thi response co star dung theo user dang login.
+Khong token thi star mac dinh false hoac khong dung de test trang thai da star.
+```
+
+### 5.6 Star Deck
 
 Request:
 
@@ -216,7 +289,13 @@ Ket qua mong doi:
 }
 ```
 
-### 5.4 Search Starred Decks
+Postman nen luu/check:
+
+```text
+star = true
+```
+
+### 5.7 Search Starred Decks
 
 Request:
 
@@ -232,7 +311,7 @@ Deck vua star nam trong danh sach.
 Field star = true.
 ```
 
-### 5.5 Unstar Deck
+### 5.8 Unstar Deck
 
 Request:
 
@@ -251,6 +330,49 @@ Ket qua mong doi:
     "star": false
   }
 }
+```
+
+### 5.9 Get Deck Cards Paginated
+
+Request:
+
+```http
+GET {{baseUrl}}/v1/decks/{{deckId}}/cards?page=1&take=20
+Authorization: Bearer {{accessToken}}
+```
+
+Ket qua mong doi:
+
+```text
+Tra ve cards trong deck theo pagination.
+Neu deck private thi user phai la owner.
+```
+
+### 5.10 Update Deck
+
+Request:
+
+```http
+PATCH {{baseUrl}}/v1/decks/{{deckId}}
+Authorization: Bearer {{accessToken}}
+```
+
+Body:
+
+```json
+{
+  "title": "English Vocabulary Updated",
+  "description": "Updated description",
+  "visibility": "public",
+  "tags": ["english", "software", "updated"]
+}
+```
+
+Ket qua mong doi:
+
+```text
+Chi owner moi update duoc.
+Response van giu field star theo user dang login.
 ```
 
 ## 6. Card Flow

@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { Order } from '../../common/enums/order.enum';
 import { CreateDeckDto } from './dto/create-deck.dto';
 import { SearchDeckDto } from './dto/search-deck.dto';
 import { UpdateDeckDto } from './dto/update-deck.dto';
 import { Deck, DeckDocument } from './schemas/deck.schema';
 import { DeckStar, DeckStarDocument } from './schemas/deck-star.schema';
-import { Order } from '../../common/enums/order.enum';
 
 @Injectable()
 export class DeckRepository {
@@ -37,13 +37,19 @@ export class DeckRepository {
   ): Promise<[DeckDocument[], number]> {
     const filter = this.buildSearchFilter(searchDeckDto, userId);
 
-    const query = this.deckModel
-      .find(filter)
-      .skip(searchDeckDto.skip)
-      .limit(searchDeckDto.take)
-      .sort({ updatedAt: searchDeckDto.order === Order.ASC ? 1 : -1 });
+    return this.findAndCount(filter, searchDeckDto);
+  }
 
-    return Promise.all([query.exec(), this.deckModel.countDocuments(filter)]);
+  async searchByUser(
+    searchDeckDto: SearchDeckDto,
+    userId: string,
+  ): Promise<[DeckDocument[], number]> {
+    const filter = {
+      ...this.buildBaseSearchFilter(searchDeckDto),
+      createdBy: new Types.ObjectId(userId),
+    };
+
+    return this.findAndCount(filter, searchDeckDto);
   }
 
   async searchStarred(
@@ -63,13 +69,7 @@ export class DeckRepository {
       _id: { $in: deckIds },
     };
 
-    const query = this.deckModel
-      .find(filter)
-      .skip(searchDeckDto.skip)
-      .limit(searchDeckDto.take)
-      .sort({ updatedAt: searchDeckDto.order === Order.ASC ? 1 : -1 });
-
-    return Promise.all([query.exec(), this.deckModel.countDocuments(filter)]);
+    return this.findAndCount(filter, searchDeckDto);
   }
 
   async updateById(
@@ -144,7 +144,20 @@ export class DeckRepository {
     return count > 0;
   }
 
-  private buildSearchFilter(searchDeckDto: SearchDeckDto, userId?: string) {
+  private findAndCount(
+    filter: Record<string, unknown>,
+    searchDeckDto: SearchDeckDto,
+  ): Promise<[DeckDocument[], number]> {
+    const query = this.deckModel
+      .find(filter)
+      .skip(searchDeckDto.skip)
+      .limit(searchDeckDto.take)
+      .sort({ updatedAt: searchDeckDto.order === Order.ASC ? 1 : -1 });
+
+    return Promise.all([query.exec(), this.deckModel.countDocuments(filter)]);
+  }
+
+  private buildBaseSearchFilter(searchDeckDto: SearchDeckDto) {
     const { keyword, visibility } = searchDeckDto;
     const filter: Record<string, unknown> = {};
 
@@ -156,6 +169,11 @@ export class DeckRepository {
       filter.visibility = visibility;
     }
 
+    return filter;
+  }
+
+  private buildSearchFilter(searchDeckDto: SearchDeckDto, userId?: string) {
+    const filter = this.buildBaseSearchFilter(searchDeckDto);
     const accessFilter = userId
       ? {
           $or: [

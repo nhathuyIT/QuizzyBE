@@ -98,10 +98,7 @@ export class CardProgressRepository {
       .exec();
   }
 
-  async initializeDeckProgress(
-    userId: string,
-    deckId: string,
-  ): Promise<void> {
+  async initializeDeckProgress(userId: string, deckId: string): Promise<void> {
     const userObjectId = new Types.ObjectId(userId);
     const deckObjectId = new Types.ObjectId(deckId);
     const cards = await this.cardModel

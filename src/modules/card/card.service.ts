@@ -1,3 +1,4 @@
+import { CardDocument } from './schemas/card.schema';
 import {
   BadRequestException,
   Injectable,
@@ -8,6 +9,9 @@ import { CreateCardDto } from './dto/create-card.dto';
 import { UpdateCardDto } from './dto/update-card.dto';
 import { CardRepository } from './card.repository';
 import { DeckService } from '../deck/deck.service';
+import { SearchDeckCardsDto } from './dto/search-deck-cards.dto';
+import { PageDto } from '../../common/dto/page.dto';
+import { PageMetaDto } from '../../common/dto/page-meta.dto';
 
 @Injectable()
 export class CardService {
@@ -65,5 +69,21 @@ export class CardService {
     }
 
     return card;
+  }
+  async findDeckCards(deckId: string, searchDeckCardsDto: SearchDeckCardsDto) {
+    await this.deckService.findById(deckId);
+
+    const [cards, itemCount] = await this.cardRepository.findByDeckIdPaginated(
+      deckId,
+      searchDeckCardsDto.page,
+      searchDeckCardsDto.take,
+    );
+
+    const meta = new PageMetaDto({
+      pageOptionsDto: searchDeckCardsDto,
+      itemCount,
+    });
+
+    return new PageDto<CardDocument>(cards, meta);
   }
 }

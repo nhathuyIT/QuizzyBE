@@ -2,8 +2,6 @@ import {
   Body,
   Controller,
   Get,
-  HttpCode,
-  HttpStatus,
   Param,
   Patch,
   Post,
@@ -14,28 +12,30 @@ import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { ParseMongoIdPipe } from '../../common/pipes/parse-mongo-id.pipe';
 import { CreateStudySessionDto } from './dto/create-study-session.dto';
 import { LogCardReviewDto } from './dto/log-card-review.dto';
-import { StudyService } from './study.service';
+import { StudySessionService } from './study-session.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('v1/study')
-export class StudyController {
-  constructor(private readonly studyService: StudyService) {}
+export class StudySessionController {
+  constructor(private readonly studySessionService: StudySessionService) {}
 
   @Post('sessions')
   createSession(
     @Body() createStudySessionDto: CreateStudySessionDto,
     @CurrentUser('id') userId: string,
   ) {
-    return this.studyService.createSession(createStudySessionDto, userId);
+    return this.studySessionService.createSession(
+      createStudySessionDto,
+      userId,
+    );
   }
 
   @Post('reviews')
-  @HttpCode(HttpStatus.OK)
   logReview(
     @Body() logCardReviewDto: LogCardReviewDto,
     @CurrentUser('id') userId: string,
   ) {
-    return this.studyService.logReview(logCardReviewDto, userId);
+    return this.studySessionService.logReview(logCardReviewDto, userId);
   }
 
   @Patch('sessions/:sessionId/finish')
@@ -43,12 +43,12 @@ export class StudyController {
     @Param('sessionId', new ParseMongoIdPipe()) sessionId: string,
     @CurrentUser('id') userId: string,
   ) {
-    return this.studyService.finishSession(sessionId, userId);
+    return this.studySessionService.finishSession(sessionId, userId);
   }
 
   @Get('sessions')
   findSessions(@CurrentUser('id') userId: string) {
-    return this.studyService.findSessions(userId);
+    return this.studySessionService.findSessions(userId);
   }
 
   @Get('sessions/:sessionId')
@@ -56,13 +56,6 @@ export class StudyController {
     @Param('sessionId', new ParseMongoIdPipe()) sessionId: string,
     @CurrentUser('id') userId: string,
   ) {
-    return this.studyService.findSession(sessionId, userId);
-  }
-  @Get('sessions/:sessionId/items')
-  getSessionItems(
-    @Param('sessionId', new ParseMongoIdPipe()) sessionId: string,
-    @CurrentUser('id') userId: string,
-  ) {
-    return this.studyService.getSessionItems(sessionId, userId);
+    return this.studySessionService.findSession(sessionId, userId);
   }
 }

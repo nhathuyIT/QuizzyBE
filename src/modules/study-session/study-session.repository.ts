@@ -5,19 +5,21 @@ import { Card, CardDocument } from '../card/schemas/card.schema';
 import { Deck, DeckDocument } from '../deck/schemas/deck.schema';
 import { CreateStudySessionDto } from './dto/create-study-session.dto';
 import { LogCardReviewDto } from './dto/log-card-review.dto';
-import { CardReview, CardReviewDocument } from './schemas/card-review.schema';
 import {
-  StudySession,
+  CardReviewDocument,
+  CardReviewEntity,
+} from './schemas/card-review.schema';
+import {
   StudySessionDocument,
+  StudySessionEntity,
 } from './schemas/study-session.schema';
-import { ReviewRating } from '../../common/enums/review-ratings.enum';
 
 @Injectable()
-export class StudyRepository {
+export class StudySessionRepository {
   constructor(
-    @InjectModel(StudySession.name)
+    @InjectModel(StudySessionEntity.name)
     private readonly studySessionModel: Model<StudySessionDocument>,
-    @InjectModel(CardReview.name)
+    @InjectModel(CardReviewEntity.name)
     private readonly cardReviewModel: Model<CardReviewDocument>,
     @InjectModel(Deck.name)
     private readonly deckModel: Model<DeckDocument>,
@@ -31,37 +33,6 @@ export class StudyRepository {
 
   async findCardById(cardId: string): Promise<CardDocument | null> {
     return this.cardModel.findById(cardId).exec();
-  }
-
-  async findActiveSessionByUser(
-    userId: string,
-  ): Promise<StudySessionDocument | null> {
-    return this.studySessionModel
-      .findOne({
-        userId: new Types.ObjectId(userId),
-        finishedAt: { $exists: false },
-      })
-      .sort({ startedAt: -1 })
-      .exec();
-  }
-
-  async findReviewedCardIds(sessionId: string): Promise<Types.ObjectId[]> {
-    return this.cardReviewModel
-      .distinct('cardId', { sessionId: new Types.ObjectId(sessionId) })
-      .exec();
-  }
-
-  async findNextCardInDeck(
-    deckId: string,
-    excludedCardIds: Types.ObjectId[],
-  ): Promise<CardDocument | null> {
-    return this.cardModel
-      .findOne({
-        deckId: new Types.ObjectId(deckId),
-        _id: { $nin: excludedCardIds },
-      })
-      .sort({ position: 1, createdAt: 1 })
-      .exec();
   }
 
   async createSession(
@@ -112,17 +83,12 @@ export class StudyRepository {
   async createReview(
     logCardReviewDto: LogCardReviewDto,
     userId: string,
-    isCorrect: boolean,
-    rating: ReviewRating,
   ): Promise<CardReviewDocument> {
     return this.cardReviewModel.create({
+      ...logCardReviewDto,
       userId: new Types.ObjectId(userId),
       sessionId: new Types.ObjectId(logCardReviewDto.sessionId),
       cardId: new Types.ObjectId(logCardReviewDto.cardId),
-      answer: logCardReviewDto.userAnswer,
-      isCorrect,
-      rating,
-      responseTimeMs: logCardReviewDto.responseTimeMs ?? 0,
     });
   }
 
@@ -138,22 +104,6 @@ export class StudyRepository {
         },
         { new: true },
       )
-      .exec();
-  }
-  async findCardsByDeckId(deckId: string): Promise<CardDocument[]> {
-    return this.cardModel
-      .find({ deckId: new Types.ObjectId(deckId) })
-      .sort({ position: 1, createdAt: 1 })
-      .exec();
-  }
-  async findCardsByIds(cardIds: string[]): Promise<CardDocument[]> {
-    return this.cardModel
-      .find({
-        _id: {
-          $in: cardIds.map((cardId) => new Types.ObjectId(cardId)),
-        },
-      })
-      .sort({ position: 1, createdAt: 1 })
       .exec();
   }
 }

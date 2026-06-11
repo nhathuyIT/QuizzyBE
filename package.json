@@ -8,7 +8,7 @@
   "scripts": {
     "build": "node ./node_modules/@nestjs/cli/bin/nest.js build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "nest start",
+    "start": "nest start --watch",
     "seed": "ts-node src/database/seed/seed.ts",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",

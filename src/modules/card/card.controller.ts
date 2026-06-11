@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { CreateCardDto } from './dto/create-card.dto';
 import { CreateBulkCardsDto } from './dto/create-bulk-cards.dto';
 import { CurrentUser, type CurrentUserPayload } from '../../common/decorators';
+import { ParseMongoIdPipe } from '../../common/pipes/parse-mongo-id.pipe';
 
 @Controller('v1/cards')
 @UseGuards(JwtAuthGuard)
@@ -29,11 +30,11 @@ export class CardController {
     return this.cardService.createBulkCards(createBulkCardsDto, user.id);
   }
   @Get('deck/:deckId')
-  findByDeckId(@Param('deckId') deckId: string) {
+  findByDeckId(@Param('deckId', new ParseMongoIdPipe()) deckId: string) {
     return this.cardService.findByDeckId(deckId);
   }
   @Get(':id')
-  findById(@Param('id') id: string) {
+  findById(@Param('id', new ParseMongoIdPipe()) id: string) {
     return this.cardService.findById(id);
   }
 }

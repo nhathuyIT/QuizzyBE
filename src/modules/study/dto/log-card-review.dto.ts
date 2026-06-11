@@ -1,37 +1,33 @@
 import {
-  IsBoolean,
   IsEnum,
-  IsInt,
   IsMongoId,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
+  Min,
 } from 'class-validator';
 
 export class LogCardReviewDto {
-  @IsMongoId({ message: 'Mã phiên học không hợp lệ' })
-  @IsNotEmpty({ message: 'Mã phiên học không được để trống' })
+  @IsMongoId({ message: 'sessionId must be a valid MongoDB ObjectId' })
+  @IsNotEmpty({ message: 'sessionId is required' })
   sessionId!: string;
 
-  @IsMongoId({ message: 'Mã thẻ không hợp lệ' })
-  @IsNotEmpty({ message: 'Mã thẻ không được để trống' })
+  @IsMongoId({ message: 'cardId must be a valid MongoDB ObjectId' })
+  @IsNotEmpty({ message: 'cardId is required' })
   cardId!: string;
 
-  @IsString({ message: 'Câu trả lời phải là chuỗi ký tự' })
+  @IsString({ message: 'userAnswer must be a string' })
   @IsOptional()
-  answer?: string;
-
-  @IsBoolean({ message: 'Kết quả đúng sai phải là giá trị boolean' })
-  @IsNotEmpty({ message: 'Kết quả đúng sai không được để trống' })
-  isCorrect!: boolean;
+  userAnswer?: string;
 
   @IsEnum(['again', 'hard', 'good', 'easy'], {
-    message: 'Mức đánh giá ôn tập không hợp lệ',
+    message: 'rating must be one of: again, hard, good, easy',
   })
-  @IsNotEmpty({ message: 'Mức đánh giá không được để trống' })
-  rating!: string;
-
-  @IsInt({ message: 'Thời gian phản hồi phải là số nguyên' })
-  @IsNotEmpty({ message: 'Thời gian phản hồi không được để trống' })
-  responseTimeMs!: number;
+  @IsOptional()
+  rating?: 'again' | 'hard' | 'good' | 'easy';
+  @IsNumber()
+  @Min(0, { message: 'responseTimeMs must be a non-negative number' })
+  @IsOptional()
+  responseTimeMs?: number;
 }

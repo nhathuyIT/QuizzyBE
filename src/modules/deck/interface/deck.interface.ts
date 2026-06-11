@@ -9,6 +9,7 @@ export interface DeckResponse {
   description?: string;
   visibility: DeckVisibility;
   createdBy: string;
+  star: boolean;
   sourceType: DeckSourceType;
   tags: string[];
   cardCount: number;

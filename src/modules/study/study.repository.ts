@@ -10,6 +10,7 @@ import {
   StudySession,
   StudySessionDocument,
 } from './schemas/study-session.schema';
+import { ReviewRating } from '../../common/enums/review-ratings.enum';
 
 @Injectable()
 export class StudyRepository {
@@ -112,7 +113,7 @@ export class StudyRepository {
     logCardReviewDto: LogCardReviewDto,
     userId: string,
     isCorrect: boolean,
-    rating: 'again' | 'good',
+    rating: ReviewRating,
   ): Promise<CardReviewDocument> {
     return this.cardReviewModel.create({
       userId: new Types.ObjectId(userId),
@@ -121,7 +122,7 @@ export class StudyRepository {
       answer: logCardReviewDto.userAnswer,
       isCorrect,
       rating,
-      responseTimeMs: 0,
+      responseTimeMs: logCardReviewDto.responseTimeMs ?? 0,
     });
   }
 
@@ -137,6 +138,22 @@ export class StudyRepository {
         },
         { new: true },
       )
+      .exec();
+  }
+  async findCardsByDeckId(deckId: string): Promise<CardDocument[]> {
+    return this.cardModel
+      .find({ deckId: new Types.ObjectId(deckId) })
+      .sort({ position: 1, createdAt: 1 })
+      .exec();
+  }
+  async findCardsByIds(cardIds: string[]): Promise<CardDocument[]> {
+    return this.cardModel
+      .find({
+        _id: {
+          $in: cardIds.map((cardId) => new Types.ObjectId(cardId)),
+        },
+      })
+      .sort({ position: 1, createdAt: 1 })
       .exec();
   }
 }

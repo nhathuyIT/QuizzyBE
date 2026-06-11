@@ -58,4 +58,11 @@ export class StudyController {
   ) {
     return this.studyService.findSession(sessionId, userId);
   }
+  @Get('sessions/:sessionId/items')
+  getSessionItems(
+    @Param('sessionId', new ParseMongoIdPipe()) sessionId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.studyService.getSessionItems(sessionId, userId);
+  }
 }

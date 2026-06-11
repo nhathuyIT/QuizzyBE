@@ -21,6 +21,7 @@ export async function createNestApp(server?: Express) {
 
 async function bootstrap() {
   const app = await createNestApp();
+  app.enableCors();
   await app.listen(process.env.PORT ?? 3001);
 }
 if (!process.env.VERCEL) {

@@ -40,6 +40,16 @@
       "key": "reviewId",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "studyMode",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "studyItemId",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -100,17 +110,22 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
                   "pm.test('status is 201', function () {",
                   "  pm.response.to.have.status(201);",
                   "});",
                   "",
+                  "const json = pm.response.json();",
+                  "",
                   "pm.test('response has success true', function () {",
-                  "  const json = pm.response.json();",
                   "  pm.expect(json.success).to.eql(true);",
+                  "});",
+                  "",
+                  "pm.test('register does not return an access token', function () {",
+                  "  pm.expect(json?.data).to.not.have.property('accessToken');",
                   "});"
-                ],
-                "type": "text/javascript"
+                ]
               }
             }
           ],
@@ -125,7 +140,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"user{{$timestamp}}@quizzy.local\",\n  \"password\": \"password123\",\n  \"name\": \"Quizzy User\"\n}",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"password123\",\n  \"name\": \"Quizzy User\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -216,7 +231,13 @@
               ]
             },
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/v1/auth/me",
               "host": [
@@ -298,6 +319,11 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
               }
             ],
             "body": {
@@ -323,7 +349,7 @@
           "response": []
         },
         {
-          "name": "Search Decks",
+          "name": "Search Decks (Public - No Auth)",
           "event": [
             {
               "listen": "test",
@@ -340,6 +366,49 @@
           "request": {
             "method": "GET",
             "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/decks?keyword=english&page=1&take=10&order=DESC",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "decks?keyword=english&page=1&take=10&order=DESC"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search Decks (With Auth)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.test('response items include star field when authenticated', function () {",
+                  "  const first = json?.data?.[0];",
+                  "  if (first) pm.expect(first).to.have.property('star');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/v1/decks?keyword=english&visibility=private&page=1&take=10&order=DESC",
               "host": [
@@ -376,10 +445,16 @@
           "response": []
         },
         {
-          "name": "Get Deck By Id",
+          "name": "Get Deck By Id (With Auth)",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/v1/decks/{{deckId}}",
               "host": [
@@ -403,6 +478,11 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
               }
             ],
             "body": {
@@ -423,6 +503,122 @@
                 "v1",
                 "decks",
                 "{{deckId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Star Deck",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/decks/{{deckId}}/star",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "decks",
+                "{{deckId}}",
+                "star"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search Starred Decks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/decks/starred?page=1&take=10&order=DESC",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "decks",
+                "starred?page=1&take=10&order=DESC"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Unstar Deck",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/decks/{{deckId}}/star",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "decks",
+                "{{deckId}}",
+                "star"
               ]
             }
           },
@@ -473,7 +669,13 @@
           ],
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/v1/cards",
               "host": [
@@ -528,6 +730,11 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
               }
             ],
             "body": {
@@ -561,6 +768,11 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
               }
             ],
             "body": {
@@ -584,13 +796,53 @@
               ]
             }
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function objectIdToString(value) {",
+                  "  if (!value) return undefined;",
+                  "  if (typeof value === 'string') return value;",
+                  "  if (value.$oid) return value.$oid;",
+                  "  if (value.buffer) {",
+                  "    return Object.keys(value.buffer)",
+                  "      .sort((a, b) => Number(a) - Number(b))",
+                  "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
+                  "      .join('');",
+                  "  }",
+                  "  return undefined;",
+                  "}",
+                  "",
+                  "pm.test('status is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "const cards = json?.data ?? json ?? [];",
+                  "const firstCard = Array.isArray(cards) ? cards[0] : undefined;",
+                  "const cardId = objectIdToString(firstCard?._id);",
+                  "const deckId = objectIdToString(firstCard?.deckId);",
+                  "if (cardId) pm.collectionVariables.set('cardId', cardId);",
+                  "if (deckId) pm.collectionVariables.set('deckId', deckId);"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Get Cards By Deck",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/v1/cards/deck/{{deckId}}",
               "host": [
@@ -610,7 +862,13 @@
           "name": "Get Card By Id",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/v1/cards/{{cardId}}",
               "host": [
@@ -631,7 +889,7 @@
       "name": "Study Flow",
       "item": [
         {
-          "name": "Study - Start Study Session",
+          "name": "Study - Start Flashcard Session",
           "event": [
             {
               "listen": "test",
@@ -651,43 +909,21 @@
                   "  return undefined;",
                   "}",
                   "",
-                  "function saveFirstDueCard(responseBody) {",
-                  "  const dueCards = responseBody?.data ?? responseBody ?? [];",
-                  "  const firstDueCard = Array.isArray(dueCards) ? dueCards[0] : undefined;",
-                  "  const cardId = objectIdToString(firstDueCard?.cardId ?? firstDueCard?._id);",
-                  "  const deckId = objectIdToString(firstDueCard?.deckId);",
-                  "  if (cardId) pm.collectionVariables.set('cardId', cardId);",
-                  "  if (deckId) pm.collectionVariables.set('deckId', deckId);",
-                  "  return cardId;",
-                  "}",
-                  "",
-                  "const body = pm.response.json();",
-                  "const data = body.data || body;",
-                  "const sessionId = objectIdToString(data?._id);",
-                  "const deckId = objectIdToString(data?.deckId) || pm.collectionVariables.get('deckId');",
-                  "const baseUrl = pm.collectionVariables.get('baseUrl') || pm.environment.get('baseUrl');",
-                  "const accessToken = pm.collectionVariables.get('accessToken') || pm.environment.get('accessToken');",
-                  "if (sessionId) pm.collectionVariables.set('studySessionId', sessionId);",
-                  "if (deckId) pm.collectionVariables.set('deckId', deckId);",
                   "pm.test('study session created', function () {",
                   "  pm.response.to.have.status(201);",
-                  "  pm.expect(sessionId).to.exist;",
                   "});",
                   "",
-                  "if (baseUrl && deckId && accessToken) {",
-                  "  pm.sendRequest({",
-                  "    url: `${baseUrl}/v1/card-progress/decks/${deckId}/due`,",
-                  "    method: 'GET',",
-                  "    header: { Authorization: `Bearer ${accessToken}` },",
-                  "  }, function (err, res) {",
-                  "    if (err) {",
-                  "      console.warn('Could not auto-load due cardId', err);",
-                  "      return;",
-                  "    }",
-                  "    const cardId = saveFirstDueCard(res.json());",
-                  "    if (!cardId) console.warn('No due card found to save as cardId. Create cards for this deck first.');",
-                  "  });",
-                  "}"
+                  "const json = pm.response.json();",
+                  "const data = json?.data ?? json;",
+                  "const sessionId = objectIdToString(data?._id);",
+                  "const deckId = objectIdToString(data?.deckId);",
+                  "if (sessionId) pm.collectionVariables.set('studySessionId', sessionId);",
+                  "if (deckId) pm.collectionVariables.set('deckId', deckId);",
+                  "if (data?.mode) pm.collectionVariables.set('studyMode', data.mode);",
+                  "",
+                  "pm.test('studySessionId is saved', function () {",
+                  "  pm.expect(pm.collectionVariables.get('studySessionId')).to.be.a('string').and.not.empty;",
+                  "});"
                 ]
               }
             }
@@ -708,7 +944,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"deckId\": \"{{deckId}}\",\n  \"mode\": \"flashcard\"\n}"
+              "raw": "{\n  \"deckId\": \"{{deckId}}\",\n  \"mode\": \"flashcard\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/v1/study/sessions",
@@ -725,7 +966,303 @@
           "response": []
         },
         {
-          "name": "Study - Log Card Review",
+          "name": "Study - Start Learn Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function objectIdToString(value) {",
+                  "  if (!value) return undefined;",
+                  "  if (typeof value === 'string') return value;",
+                  "  if (value.$oid) return value.$oid;",
+                  "  if (value.buffer) {",
+                  "    return Object.keys(value.buffer)",
+                  "      .sort((a, b) => Number(a) - Number(b))",
+                  "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
+                  "      .join('');",
+                  "  }",
+                  "  return undefined;",
+                  "}",
+                  "",
+                  "pm.test('study session created', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "const data = json?.data ?? json;",
+                  "const sessionId = objectIdToString(data?._id);",
+                  "const deckId = objectIdToString(data?.deckId);",
+                  "if (sessionId) pm.collectionVariables.set('studySessionId', sessionId);",
+                  "if (deckId) pm.collectionVariables.set('deckId', deckId);",
+                  "if (data?.mode) pm.collectionVariables.set('studyMode', data.mode);",
+                  "",
+                  "pm.test('studySessionId is saved', function () {",
+                  "  pm.expect(pm.collectionVariables.get('studySessionId')).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deckId\": \"{{deckId}}\",\n  \"mode\": \"learn\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/study/sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "study",
+                "sessions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Study - Start Test Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function objectIdToString(value) {",
+                  "  if (!value) return undefined;",
+                  "  if (typeof value === 'string') return value;",
+                  "  if (value.$oid) return value.$oid;",
+                  "  if (value.buffer) {",
+                  "    return Object.keys(value.buffer)",
+                  "      .sort((a, b) => Number(a) - Number(b))",
+                  "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
+                  "      .join('');",
+                  "  }",
+                  "  return undefined;",
+                  "}",
+                  "",
+                  "pm.test('study session created', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "const data = json?.data ?? json;",
+                  "const sessionId = objectIdToString(data?._id);",
+                  "const deckId = objectIdToString(data?.deckId);",
+                  "if (sessionId) pm.collectionVariables.set('studySessionId', sessionId);",
+                  "if (deckId) pm.collectionVariables.set('deckId', deckId);",
+                  "if (data?.mode) pm.collectionVariables.set('studyMode', data.mode);",
+                  "",
+                  "pm.test('studySessionId is saved', function () {",
+                  "  pm.expect(pm.collectionVariables.get('studySessionId')).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deckId\": \"{{deckId}}\",\n  \"mode\": \"test\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/study/sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "study",
+                "sessions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Study - Start Match Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function objectIdToString(value) {",
+                  "  if (!value) return undefined;",
+                  "  if (typeof value === 'string') return value;",
+                  "  if (value.$oid) return value.$oid;",
+                  "  if (value.buffer) {",
+                  "    return Object.keys(value.buffer)",
+                  "      .sort((a, b) => Number(a) - Number(b))",
+                  "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
+                  "      .join('');",
+                  "  }",
+                  "  return undefined;",
+                  "}",
+                  "",
+                  "pm.test('study session created', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "const data = json?.data ?? json;",
+                  "const sessionId = objectIdToString(data?._id);",
+                  "const deckId = objectIdToString(data?.deckId);",
+                  "if (sessionId) pm.collectionVariables.set('studySessionId', sessionId);",
+                  "if (deckId) pm.collectionVariables.set('deckId', deckId);",
+                  "if (data?.mode) pm.collectionVariables.set('studyMode', data.mode);",
+                  "",
+                  "pm.test('studySessionId is saved', function () {",
+                  "  pm.expect(pm.collectionVariables.get('studySessionId')).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deckId\": \"{{deckId}}\",\n  \"mode\": \"match\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/study/sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "study",
+                "sessions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Study - Get Session Items",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function objectIdToString(value) {",
+                  "  if (!value) return undefined;",
+                  "  if (typeof value === 'string') return value;",
+                  "  if (value.$oid) return value.$oid;",
+                  "  if (value.buffer) {",
+                  "    return Object.keys(value.buffer)",
+                  "      .sort((a, b) => Number(a) - Number(b))",
+                  "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
+                  "      .join('');",
+                  "  }",
+                  "  return undefined;",
+                  "}",
+                  "",
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "const items = json?.data ?? json ?? [];",
+                  "const firstItem = Array.isArray(items) ? items[0] : undefined;",
+                  "const cardId = objectIdToString(firstItem?.cardId);",
+                  "const itemId = firstItem?.questionId || firstItem?.tileId || cardId;",
+                  "if (cardId) pm.collectionVariables.set('cardId', cardId);",
+                  "if (itemId) pm.collectionVariables.set('studyItemId', itemId);",
+                  "",
+                  "pm.test('items array is returned', function () {",
+                  "  pm.expect(items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/study/sessions/{{studySessionId}}/items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "study",
+                "sessions",
+                "{{studySessionId}}",
+                "items"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Study - Log Flashcard Review (rating)",
           "event": [
             {
               "listen": "prerequest",
@@ -734,7 +1271,7 @@
                 "exec": [
                   "const missing = ['studySessionId', 'cardId'].filter((key) => !pm.collectionVariables.get(key));",
                   "if (missing.length) {",
-                  "  console.warn(`Missing ${missing.join(', ')}. Run Study - Start Study Session and Card Progress - Get Due Cards first.`);",
+                  "  console.warn(`Missing ${missing.join(', ')}. Run a Study - Start ... Session request, then Study - Get Session Items first.`);",
                   "}"
                 ]
               }
@@ -766,7 +1303,11 @@
                   "const reviewId = objectIdToString(data?.reviewId ?? data?._id);",
                   "const cardId = objectIdToString(data?.cardId);",
                   "if (reviewId) pm.collectionVariables.set('reviewId', reviewId);",
-                  "if (cardId) pm.collectionVariables.set('cardId', cardId);"
+                  "if (cardId) pm.collectionVariables.set('cardId', cardId);",
+                  "",
+                  "pm.test('review contains correctness result', function () {",
+                  "  pm.expect(data).to.have.property('isCorrect');",
+                  "});"
                 ]
               }
             }
@@ -787,7 +1328,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sessionId\": \"{{studySessionId}}\",\n  \"cardId\": \"{{cardId}}\",\n  \"userAnswer\": \"On dinh, nhat quan\"\n}"
+              "raw": "{\n  \"sessionId\": \"{{studySessionId}}\",\n  \"cardId\": \"{{cardId}}\",\n  \"rating\": \"easy\",\n  \"responseTimeMs\": 1200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/v1/study/reviews",
@@ -804,7 +1350,298 @@
           "response": []
         },
         {
+          "name": "Study - Log Written Review (learn/test)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const missing = ['studySessionId', 'cardId'].filter((key) => !pm.collectionVariables.get(key));",
+                  "if (missing.length) {",
+                  "  console.warn(`Missing ${missing.join(', ')}. Run a Study - Start ... Session request, then Study - Get Session Items first.`);",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function objectIdToString(value) {",
+                  "  if (!value) return undefined;",
+                  "  if (typeof value === 'string') return value;",
+                  "  if (value.$oid) return value.$oid;",
+                  "  if (value.buffer) {",
+                  "    return Object.keys(value.buffer)",
+                  "      .sort((a, b) => Number(a) - Number(b))",
+                  "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
+                  "      .join('');",
+                  "  }",
+                  "  return undefined;",
+                  "}",
+                  "",
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "const data = json?.data ?? json;",
+                  "const reviewId = objectIdToString(data?.reviewId ?? data?._id);",
+                  "const cardId = objectIdToString(data?.cardId);",
+                  "if (reviewId) pm.collectionVariables.set('reviewId', reviewId);",
+                  "if (cardId) pm.collectionVariables.set('cardId', cardId);",
+                  "",
+                  "pm.test('review contains correctness result', function () {",
+                  "  pm.expect(data).to.have.property('isCorrect');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{studySessionId}}\",\n  \"cardId\": \"{{cardId}}\",\n  \"userAnswer\": \"On dinh, nhat quan\",\n  \"responseTimeMs\": 3200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/study/reviews",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "study",
+                "reviews"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Study - Log Match Pair Review",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const missing = ['studySessionId', 'cardId'].filter((key) => !pm.collectionVariables.get(key));",
+                  "if (missing.length) {",
+                  "  console.warn(`Missing ${missing.join(', ')}. Run a Study - Start ... Session request, then Study - Get Session Items first.`);",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function objectIdToString(value) {",
+                  "  if (!value) return undefined;",
+                  "  if (typeof value === 'string') return value;",
+                  "  if (value.$oid) return value.$oid;",
+                  "  if (value.buffer) {",
+                  "    return Object.keys(value.buffer)",
+                  "      .sort((a, b) => Number(a) - Number(b))",
+                  "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
+                  "      .join('');",
+                  "  }",
+                  "  return undefined;",
+                  "}",
+                  "",
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "const data = json?.data ?? json;",
+                  "const reviewId = objectIdToString(data?.reviewId ?? data?._id);",
+                  "const cardId = objectIdToString(data?.cardId);",
+                  "if (reviewId) pm.collectionVariables.set('reviewId', reviewId);",
+                  "if (cardId) pm.collectionVariables.set('cardId', cardId);",
+                  "",
+                  "pm.test('review contains correctness result', function () {",
+                  "  pm.expect(data).to.have.property('isCorrect');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{studySessionId}}\",\n  \"cardId\": \"{{cardId}}\",\n  \"userAnswer\": \"On dinh, nhat quan\",\n  \"responseTimeMs\": 1800\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/study/reviews",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "study",
+                "reviews"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Card Progress - Get Due Cards",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function objectIdToString(value) {",
+                  "  if (!value) return undefined;",
+                  "  if (typeof value === 'string') return value;",
+                  "  if (value.$oid) return value.$oid;",
+                  "  if (value.buffer) {",
+                  "    return Object.keys(value.buffer)",
+                  "      .sort((a, b) => Number(a) - Number(b))",
+                  "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
+                  "      .join('');",
+                  "  }",
+                  "  return undefined;",
+                  "}",
+                  "",
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "const dueCards = json?.data ?? json ?? [];",
+                  "const firstDueCard = Array.isArray(dueCards) ? dueCards[0] : undefined;",
+                  "const cardId = objectIdToString(firstDueCard?.cardId ?? firstDueCard?._id);",
+                  "const deckId = objectIdToString(firstDueCard?.deckId);",
+                  "if (cardId) pm.collectionVariables.set('cardId', cardId);",
+                  "if (deckId) pm.collectionVariables.set('deckId', deckId);",
+                  "if (!cardId) console.warn('No due card found. Create cards for this deck first, or review all due cards already completed.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/card-progress/decks/{{deckId}}/due",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "card-progress",
+                "decks",
+                "{{deckId}}",
+                "due"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Card Progress - Get Deck Progress Summary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/card-progress/decks/{{deckId}}/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "card-progress",
+                "decks",
+                "{{deckId}}",
+                "summary"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Card Progress - Upsert Progress",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "PUT",
             "header": [
@@ -842,73 +1679,20 @@
           "response": []
         },
         {
-          "name": "Card Progress - Get Due Cards",
+          "name": "Study - Get Sessions",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "function objectIdToString(value) {",
-                  "  if (!value) return undefined;",
-                  "  if (typeof value === 'string') return value;",
-                  "  if (value.$oid) return value.$oid;",
-                  "  if (value.buffer) {",
-                  "    return Object.keys(value.buffer)",
-                  "      .sort((a, b) => Number(a) - Number(b))",
-                  "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
-                  "      .join('');",
-                  "  }",
-                  "  return undefined;",
-                  "}",
-                  "",
-                  "function saveFirstDueCard(responseBody) {",
-                  "  const dueCards = responseBody?.data ?? responseBody ?? [];",
-                  "  const firstDueCard = Array.isArray(dueCards) ? dueCards[0] : undefined;",
-                  "  const cardId = objectIdToString(firstDueCard?.cardId ?? firstDueCard?._id);",
-                  "  const deckId = objectIdToString(firstDueCard?.deckId);",
-                  "  if (cardId) pm.collectionVariables.set('cardId', cardId);",
-                  "  if (deckId) pm.collectionVariables.set('deckId', deckId);",
-                  "  return cardId;",
-                  "}",
-                  "",
                   "pm.test('status is 200', function () {",
                   "  pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "const cardId = saveFirstDueCard(pm.response.json());",
-                  "if (!cardId) console.warn('No due card found to save as cardId. Create cards for this deck first.');"
+                  "});"
                 ]
               }
             }
           ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/v1/card-progress/decks/{{deckId}}/due",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "card-progress",
-                "decks",
-                "{{deckId}}",
-                "due"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Study - Get Sessions",
           "request": {
             "method": "GET",
             "header": [
@@ -934,6 +1718,19 @@
         },
         {
           "name": "Study - Get Session By Id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -960,6 +1757,19 @@
         },
         {
           "name": "Study - Finish Study Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "PATCH",
             "header": [
@@ -980,33 +1790,6 @@
                 "sessions",
                 "{{studySessionId}}",
                 "finish"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Card Progress - Get Deck Progress Summary",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/v1/card-progress/decks/{{deckId}}/summary",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "card-progress",
-                "decks",
-                "{{deckId}}",
-                "summary"
               ]
             }
           },

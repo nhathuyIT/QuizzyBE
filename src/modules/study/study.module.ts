@@ -11,6 +11,7 @@ import {
   StudySession,
   StudySessionSchema,
 } from './schemas/study-session.schema';
+import { StudyItemsBuilder } from './builders/study-item-builder';
 
 @Module({
   imports: [
@@ -23,7 +24,7 @@ import {
     ]),
   ],
   controllers: [StudyController],
-  providers: [StudyService, StudyRepository],
+  providers: [StudyService, StudyRepository, StudyItemsBuilder],
   exports: [StudyService, StudyRepository],
 })
 export class StudyModule {}

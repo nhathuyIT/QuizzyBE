@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="1500" viewBox="0 0 1120 1500">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#111"/>
+    </marker>
+    <style>
+      .title { font: 700 29px Arial, sans-serif; fill: #111; }
+      .lane-title { font: 700 25px Arial, sans-serif; fill: #111; }
+      .label { font: 600 16px Arial, sans-serif; fill: #111; text-anchor: middle; dominant-baseline: middle; }
+      .small-label { font: 600 15px Arial, sans-serif; fill: #111; text-anchor: middle; dominant-baseline: middle; }
+      .edge-label { font: 700 15px Arial, sans-serif; fill: #111; }
+      .shape { fill: #fff; stroke: #111; stroke-width: 2; }
+      .flow { fill: none; stroke: #111; stroke-width: 2; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1120" height="1500" fill="#fff"/>
+  <text x="560" y="48" class="title" text-anchor="middle">Workflow 1: Teacher Preparing Course and Materials</text>
+
+  <rect x="70" y="75" width="980" height="1370" class="shape"/>
+  <line x1="70" y1="125" x2="1050" y2="125" stroke="#111" stroke-width="2"/>
+  <line x1="650" y1="75" x2="650" y2="1445" stroke="#111" stroke-width="2"/>
+  <text x="360" y="108" class="lane-title" text-anchor="middle">Teacher</text>
+  <text x="850" y="108" class="lane-title" text-anchor="middle">System</text>
+
+  <ellipse cx="360" cy="165" rx="76" ry="22" class="shape"/>
+  <text x="360" y="165" class="label">Start</text>
+
+  <rect x="225" y="215" width="270" height="42" class="shape"/>
+  <text x="360" y="236" class="label">Log In to Teacher Account</text>
+
+  <rect x="225" y="285" width="270" height="42" class="shape"/>
+  <text x="360" y="306" class="label">Select Create Course</text>
+
+  <polygon points="195,355 545,355 525,413 175,413" class="shape"/>
+  <text x="360" y="375" class="small-label">
+    <tspan x="360">Enter Course Name, Description,</tspan>
+    <tspan x="360" dy="20">and Access Password</tspan>
+  </text>
+
+  <rect x="225" y="441" width="270" height="42" class="shape"/>
+  <text x="360" y="462" class="label">Click Confirm Create Course</text>
+
+  <rect x="225" y="511" width="270" height="42" class="shape"/>
+  <text x="360" y="532" class="label">Select Upload Document</text>
+
+  <rect x="225" y="581" width="270" height="42" class="shape"/>
+  <text x="360" y="602" class="label">Select Course</text>
+
+  <polygon points="205,651 535,651 515,693 185,693" class="shape"/>
+  <text x="360" y="672" class="label">Choose PDF, DOCX, or PPTX File</text>
+
+  <polygon points="195,721 545,721 525,763 175,763" class="shape"/>
+  <text x="360" y="742" class="label">Enter Chapter and Chapter Title</text>
+
+  <rect x="225" y="791" width="270" height="42" class="shape"/>
+  <text x="360" y="812" class="label">Click Confirm Upload</text>
+
+  <rect x="710" y="861" width="280" height="42" class="shape"/>
+  <text x="850" y="882" class="label">Process and Validate Document</text>
+
+  <rect x="710" y="931" width="280" height="48" class="shape"/>
+  <text x="850" y="955" class="small-label">
+    <tspan x="850">Display Document Status</tspan>
+    <tspan x="850" dy="18">on Dashboard</tspan>
+  </text>
+
+  <polygon points="850,1021 965,1071 850,1121 735,1071" class="shape"/>
+  <text x="850" y="1061" class="label">
+    <tspan x="850">Does the Document</tspan>
+    <tspan x="850" dy="20">Show an Error?</tspan>
+  </text>
+
+  <rect x="445" y="1050" width="190" height="42" class="shape"/>
+  <text x="540" y="1071" class="label">Delete Failed Document</text>
+
+  <polygon points="360,1165 500,1220 360,1275 220,1220" class="shape"/>
+  <text x="360" y="1210" class="small-label">
+    <tspan x="360">Upload More</tspan>
+    <tspan x="360" dy="18">Documents?</tspan>
+  </text>
+
+  <rect x="210" y="1320" width="300" height="48" class="shape"/>
+  <text x="360" y="1344" class="small-label">
+    <tspan x="360">Share Course Password</tspan>
+    <tspan x="360" dy="18">with Students</tspan>
+  </text>
+
+  <ellipse cx="360" cy="1405" rx="76" ry="22" class="shape"/>
+  <text x="360" y="1405" class="label">End</text>
+
+  <path d="M360 187 V215" class="flow"/>
+  <path d="M360 257 V285" class="flow"/>
+  <path d="M360 327 V355" class="flow"/>
+  <path d="M360 413 V441" class="flow"/>
+  <path d="M360 483 V511" class="flow"/>
+  <path d="M360 553 V581" class="flow"/>
+  <path d="M360 623 V651" class="flow"/>
+  <path d="M360 693 V721" class="flow"/>
+  <path d="M360 763 V791" class="flow"/>
+  <path d="M495 812 H850 V861" class="flow"/>
+  <path d="M850 903 V931" class="flow"/>
+  <path d="M850 979 V1021" class="flow"/>
+
+  <path d="M735 1071 H635" class="flow"/>
+  <text x="680" y="1058" class="edge-label">Yes</text>
+  <path d="M540 1092 V1135 H125 V532 H225" class="flow"/>
+
+  <path d="M850 1121 V1220 H500" class="flow"/>
+  <text x="862" y="1154" class="edge-label">No</text>
+
+  <path d="M220 1220 H145 V532 H225" class="flow"/>
+  <text x="164" y="1206" class="edge-label">Yes</text>
+
+  <path d="M360 1275 V1320" class="flow"/>
+  <text x="372" y="1302" class="edge-label">No</text>
+  <path d="M360 1368 V1383" class="flow"/>
+</svg>

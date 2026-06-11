@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Types } from 'mongoose';
+import { ReviewRating } from '../../common/enums/review-ratings.enum';
 import { CardProgressDocument } from '../card-progress/schemas/card-progress.schema';
 import { CardProgressService } from '../card-progress/card-progress.service';
 import { CardDocument } from '../card/schemas/card.schema';
@@ -12,12 +13,14 @@ import { DeckDocument } from '../deck/schemas/deck.schema';
 import { CreateStudySessionDto } from './dto/create-study-session.dto';
 import { LogCardReviewDto } from './dto/log-card-review.dto';
 import { StudyRepository } from './study.repository';
+import { StudyItemsBuilder } from './builders/study-item-builder';
 
 @Injectable()
 export class StudyService {
   constructor(
     private readonly studyRepository: StudyRepository,
     private readonly cardProgressService: CardProgressService,
+    private readonly studyItemsBuilder: StudyItemsBuilder,
   ) {}
 
   async createSession(
@@ -49,6 +52,32 @@ export class StudyService {
     return this.getOwnedSession(sessionId, userId);
   }
 
+  async getSessionItems(sessionId: string, userId: string) {
+    const session = await this.getOwnedSession(sessionId, userId);
+    const deckId = session.deckId.toString();
+
+    if (session.mode === 'learn') {
+      const dueProgress = await this.cardProgressService.findDueCards(
+        userId,
+        deckId,
+      );
+
+      const dueCardIds = dueProgress.map((progress) =>
+        progress.cardId.toString(),
+      );
+
+      const cards = dueCardIds.length
+        ? await this.studyRepository.findCardsByIds(dueCardIds)
+        : await this.studyRepository.findCardsByDeckId(deckId);
+
+      return this.studyItemsBuilder.build(session.mode, cards);
+    }
+
+    const cards = await this.studyRepository.findCardsByDeckId(deckId);
+
+    return this.studyItemsBuilder.build(session.mode, cards);
+  }
+
   async logReview(logCardReviewDto: LogCardReviewDto, userId: string) {
     const session = await this.getOwnedSession(
       logCardReviewDto.sessionId,
@@ -70,8 +99,11 @@ export class StudyService {
       throw new BadRequestException('Study session is already finished');
     }
 
-    const isCorrect = this.answersMatch(logCardReviewDto.userAnswer, card.back);
-    const rating = isCorrect ? 'good' : 'again';
+    const { isCorrect, rating } = this.resolveReviewResult(
+      session.mode,
+      logCardReviewDto,
+      card,
+    );
     const review = await this.studyRepository.createReview(
       logCardReviewDto,
       userId,
@@ -145,6 +177,34 @@ export class StudyService {
 
   private normalizeAnswer(answer: string) {
     return answer.trim().replace(/\s+/g, ' ').toLowerCase();
+  }
+
+  private resolveReviewResult(
+    mode: 'flashcard' | 'learn' | 'test' | 'match',
+    logCardReviewDto: LogCardReviewDto,
+    card: CardDocument,
+  ): { isCorrect: boolean; rating: ReviewRating } {
+    if (mode === 'flashcard') {
+      if (!logCardReviewDto.rating) {
+        throw new BadRequestException('rating is required in flashcard mode');
+      }
+
+      return {
+        isCorrect: logCardReviewDto.rating !== 'again',
+        rating: logCardReviewDto.rating,
+      };
+    }
+
+    if (!logCardReviewDto.userAnswer) {
+      throw new BadRequestException('userAnswer is required in this mode');
+    }
+
+    const isCorrect = this.answersMatch(logCardReviewDto.userAnswer, card.back);
+
+    return {
+      isCorrect,
+      rating: isCorrect ? (logCardReviewDto.rating ?? 'good') : 'again',
+    };
   }
 
   private toProgressUpdate(progress: CardProgressDocument) {

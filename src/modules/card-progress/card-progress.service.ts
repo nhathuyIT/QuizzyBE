@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Types } from 'mongoose';
+import { ReviewRating } from '../../common/enums/review-ratings.enum';
 import { UpsertCardProgressDto } from './dto/upsert-card-progress.dto';
 import {
   CardProgressRepository,
@@ -12,8 +13,6 @@ import {
 } from './card-progress.repository';
 import { DeckDocument } from '../deck/schemas/deck.schema';
 import { CardProgressDocument } from './schemas/card-progress.schema';
-
-type ReviewRating = 'again' | 'hard' | 'good' | 'easy';
 
 interface ApplyReviewProgressInput {
   userId: string;
@@ -53,11 +52,10 @@ export class CardProgressService {
   }
 
   async applyReviewProgress(input: ApplyReviewProgressInput) {
-    const currentProgress =
-      await this.cardProgressRepository.findByUserAndCard(
-        input.userId,
-        input.cardId,
-      );
+    const currentProgress = await this.cardProgressRepository.findByUserAndCard(
+      input.userId,
+      input.cardId,
+    );
     const nextProgress = this.calculateNextProgress(currentProgress, input);
 
     return this.cardProgressRepository.upsertReviewProgress(

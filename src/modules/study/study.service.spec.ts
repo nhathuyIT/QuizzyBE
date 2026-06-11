@@ -178,4 +178,57 @@ describe('StudyService', () => {
       }),
     );
   });
+
+  it('uses flashcard rating without requiring a typed answer', async () => {
+    const userId = new Types.ObjectId().toString();
+    const deckId = new Types.ObjectId();
+    const sessionId = new Types.ObjectId();
+    const cardId = new Types.ObjectId();
+
+    studyRepository.findSessionById.mockResolvedValue({
+      _id: sessionId,
+      userId: new Types.ObjectId(userId),
+      deckId,
+      mode: 'flashcard',
+    });
+    studyRepository.findCardById.mockResolvedValue({
+      _id: cardId,
+      deckId,
+      back: 'Correct answer',
+    });
+    studyRepository.createReview.mockResolvedValue({
+      _id: new Types.ObjectId(),
+    });
+    cardProgressService.applyReviewProgress.mockResolvedValue({
+      status: 'review',
+      mastery: 25,
+      easeFactor: 2.5,
+      intervalDays: 7,
+      dueAt: new Date('2026-06-15T00:00:00.000Z'),
+    });
+    studyRepository.updateSessionStats.mockResolvedValue({});
+
+    const result = await service.logReview(
+      {
+        sessionId: sessionId.toString(),
+        cardId: cardId.toString(),
+        rating: 'easy',
+      },
+      userId,
+    );
+
+    expect(result.isCorrect).toBe(true);
+    expect(studyRepository.createReview).toHaveBeenCalledWith(
+      expect.any(Object),
+      userId,
+      true,
+      'easy',
+    );
+    expect(cardProgressService.applyReviewProgress).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isCorrect: true,
+        rating: 'easy',
+      }),
+    );
+  });
 });

@@ -470,6 +470,70 @@
           "response": []
         },
         {
+          "name": "Get Deck Cards Paginated",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "function objectIdToString(value) {",
+                  "  if (!value) return undefined;",
+                  "  if (typeof value === 'string') return value;",
+                  "  if (value.$oid) return value.$oid;",
+                  "  if (value.buffer) {",
+                  "    return Object.keys(value.buffer)",
+                  "      .sort((a, b) => Number(a) - Number(b))",
+                  "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
+                  "      .join('');",
+                  "  }",
+                  "  return undefined;",
+                  "}",
+                  "",
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "const cards = json?.data ?? [];",
+                  "if (cards.length > 0) {",
+                  "  const cardId = objectIdToString(cards[0]._id);",
+                  "  if (cardId) pm.collectionVariables.set('cardId', cardId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/decks/{{deckId}}/cards?page=1&take=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "decks",
+                "{{deckId}}",
+                "cards"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "take",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Returns cards inside one deck with pagination. Requires DeckCardsController to be registered in CardModule."
+          },
+          "response": []
+        },
+        {
           "name": "Update Deck",
           "request": {
             "method": "PATCH",

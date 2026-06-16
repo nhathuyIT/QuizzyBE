@@ -9,6 +9,13 @@ export async function createNestApp(server?: Express) {
     ? await NestFactory.create(AppModule, new ExpressAdapter(server))
     : await NestFactory.create(AppModule);
 
+  app.enableCors({
+    origin: true,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -21,7 +28,6 @@ export async function createNestApp(server?: Express) {
 
 async function bootstrap() {
   const app = await createNestApp();
-  app.enableCors();
   await app.listen(process.env.PORT ?? 3001);
 }
 if (!process.env.VERCEL) {

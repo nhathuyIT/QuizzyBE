@@ -21,10 +21,14 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   async validate(payload: JwtPayload): Promise<CurrentUserPayload> {
-    const user = await this.userService.findById(payload.sub);
+    const user = await this.userService.findByIdForAuth(payload.sub);
 
-    if (!user) {
+    if (!user || user.isDeleted || user.status === 'suspended') {
       throw new UnauthorizedException('Token không hợp lệ');
+    }
+
+    if ((payload.tokenVersion ?? 0) !== (user.tokenVersion ?? 0)) {
+      throw new UnauthorizedException('Token has been revoked');
     }
 
     return {

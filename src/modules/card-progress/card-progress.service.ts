@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Types } from 'mongoose';
+import { ClientSession, Types } from 'mongoose';
 import { ReviewRating } from '../../common/enums/review-ratings.enum';
 import { UpsertCardProgressDto } from './dto/upsert-card-progress.dto';
 import {
@@ -21,6 +21,22 @@ interface ApplyReviewProgressInput {
   isCorrect: boolean;
   rating: ReviewRating;
 }
+
+interface ApplyReviewProgressBatchInput {
+  userId: string;
+  deckId: string;
+  reviews: Array<{
+    cardId: string;
+    isCorrect: boolean;
+    rating: ReviewRating;
+  }>;
+  session?: ClientSession;
+}
+
+type CardProgressState = Pick<
+  CardProgressDocument | CardProgressUpdate,
+  'mastery' | 'easeFactor' | 'correctCount' | 'wrongCount'
+>;
 
 @Injectable()
 export class CardProgressService {
@@ -66,6 +82,49 @@ export class CardProgressService {
     );
   }
 
+  async applyReviewProgressBatch(input: ApplyReviewProgressBatchInput) {
+    if (input.reviews.length === 0) {
+      return [];
+    }
+
+    const cardIds = Array.from(
+      new Set(input.reviews.map((review) => review.cardId)),
+    );
+    const currentProgress =
+      await this.cardProgressRepository.findByUserAndCards(
+        input.userId,
+        cardIds,
+        input.session,
+      );
+    const currentProgressByCardId = new Map(
+      currentProgress.map((progress) => [progress.cardId.toString(), progress]),
+    );
+    const finalProgressByCardId = new Map<string, CardProgressUpdate>();
+    const progressByReview = input.reviews.map((review) => {
+      const previousProgress =
+        finalProgressByCardId.get(review.cardId) ??
+        currentProgressByCardId.get(review.cardId) ??
+        null;
+      const nextProgress = this.calculateNextProgress(previousProgress, review);
+
+      finalProgressByCardId.set(review.cardId, nextProgress);
+
+      return nextProgress;
+    });
+
+    await this.cardProgressRepository.bulkUpsertReviewProgress(
+      input.userId,
+      input.deckId,
+      Array.from(finalProgressByCardId.entries()).map(([cardId, progress]) => ({
+        cardId,
+        progress,
+      })),
+      input.session,
+    );
+
+    return progressByReview;
+  }
+
   async findDueCards(userId: string, deckId: string, dueAt?: Date) {
     await this.validateDeckAccess(deckId, userId);
     await this.cardProgressRepository.initializeDeckProgress(userId, deckId);
@@ -81,7 +140,7 @@ export class CardProgressService {
   }
 
   private calculateNextProgress(
-    currentProgress: CardProgressDocument | null,
+    currentProgress: CardProgressState | null,
     review: Pick<ApplyReviewProgressInput, 'isCorrect' | 'rating'>,
   ): CardProgressUpdate {
     const ratingConfig = {
@@ -129,9 +188,11 @@ export class CardProgressService {
   }
 
   private canAccessDeck(deck: DeckDocument, userId: string) {
+    const isOwner = this.objectIdEquals(deck.createdBy, userId);
     return (
-      deck.visibility !== 'private' ||
-      this.objectIdEquals(deck.createdBy, userId)
+      !deck.deletedAt &&
+      (isOwner ||
+        (deck.visibility !== 'private' && deck.moderationStatus !== 'hidden'))
     );
   }
 

@@ -23,6 +23,10 @@ export class UserRepository {
     return this.userModel.findOne({ _id: id, isDeleted: false }).exec();
   }
 
+  async findByIdForAuth(id: string): Promise<UserDocument | null> {
+    return this.userModel.findById(id).exec();
+  }
+
   async updateProfile(
     id: string,
     updateUserProfileDto: UpdateUserProfileDto,
@@ -31,6 +35,26 @@ export class UserRepository {
       .findOneAndUpdate({ _id: id, isDeleted: false }, updateUserProfileDto, {
         new: true,
       })
+      .exec();
+  }
+
+  async incrementTokenVersion(id: string): Promise<UserDocument | null> {
+    return this.userModel
+      .findOneAndUpdate(
+        { _id: id, isDeleted: false },
+        { $inc: { tokenVersion: 1 } },
+        { new: true },
+      )
+      .exec();
+  }
+
+  async updateLastLogin(id: string): Promise<UserDocument | null> {
+    return this.userModel
+      .findByIdAndUpdate(
+        id,
+        { $set: { lastLoginAt: new Date() } },
+        { new: true },
+      )
       .exec();
   }
 }

@@ -20,6 +20,7 @@ export type StudyItem =
       type: 'written';
       prompt: string;
       hint?: string;
+      correctAnswer?: string;
     }
   | {
       cardId: string;
@@ -27,6 +28,7 @@ export type StudyItem =
       type: 'written' | 'multiple_choice';
       prompt: string;
       options?: ChoiceOption[];
+      correctAnswer?: string;
     }
   | {
       tileId: string;

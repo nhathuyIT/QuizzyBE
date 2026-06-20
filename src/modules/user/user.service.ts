@@ -24,6 +24,10 @@ export class UserService {
     return user;
   }
 
+  findByIdForAuth(id: string) {
+    return this.userRepository.findByIdForAuth(id);
+  }
+
   async updateProfile(id: string, updateUserProfileDto: UpdateUserProfileDto) {
     const user = await this.userRepository.updateProfile(
       id,
@@ -33,6 +37,24 @@ export class UserService {
       throw new NotFoundException('Người dùng không tồn tại trên hệ thống');
     }
 
+    return user;
+  }
+
+  async invalidateTokens(id: string) {
+    const user = await this.userRepository.incrementTokenVersion(id);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
+  }
+
+  async markLogin(id: string) {
+    const user = await this.userRepository.updateLastLogin(id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
     return user;
   }
 }

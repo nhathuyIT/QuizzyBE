@@ -34,4 +34,11 @@ export class AuthController {
   me(@CurrentUser() user: CurrentUserPayload) {
     return this.authService.me(user.id);
   }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  logout(@CurrentUser() user: CurrentUserPayload) {
+    return this.authService.logout(user.id);
+  }
 }

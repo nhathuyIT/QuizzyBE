@@ -10,6 +10,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start --watch",
     "seed": "ts-node src/database/seed/seed.ts",
+    "migrate:admin-v1": "ts-node src/database/migrations/backfill-admin-v1.ts",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",

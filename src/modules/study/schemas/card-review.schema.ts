@@ -31,8 +31,20 @@ export class CardReview {
   @Prop({ required: true, enum: ['again', 'hard', 'good', 'easy'] })
   rating!: string;
 
+  @Prop({ index: true })
+  clientReviewId?: string;
+
   @Prop({ required: true })
   responseTimeMs!: number;
 }
 
 export const CardReviewSchema = SchemaFactory.createForClass(CardReview);
+
+CardReviewSchema.index(
+  { userId: 1, sessionId: 1, clientReviewId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { clientReviewId: { $exists: true } },
+  },
+);
+CardReviewSchema.index({ createdAt: -1, userId: 1, isCorrect: 1 });

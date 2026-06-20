@@ -32,6 +32,7 @@ async function clearCollections(client: MongoClient): Promise<void> {
     'card_progress',
     'study_sessions',
     'card_reviews',
+    'admin_audit_logs',
   ];
 
   for (const collectionName of collections) {
@@ -145,6 +146,8 @@ async function runSeed(): Promise<void> {
         passwordHash,
         name: 'Nguyen Huy Hoc Vien',
         role: 'student',
+        status: 'active',
+        tokenVersion: 0,
         avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Student',
         totalPoints: 120,
         streak: {
@@ -166,6 +169,8 @@ async function runSeed(): Promise<void> {
         passwordHash,
         name: 'Thay Giao AI',
         role: 'teacher',
+        status: 'active',
+        tokenVersion: 0,
         avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Teacher',
         totalPoints: 0,
         streak: {
@@ -183,11 +188,58 @@ async function runSeed(): Promise<void> {
     ]);
     console.log('Da tao users mau.');
 
+    const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    const adminName = process.env.ADMIN_NAME?.trim() || 'Quizzy Admin';
+
+    if (adminEmail && adminPassword) {
+      const existingAdmin = await db.collection('users').findOne({
+        email: adminEmail,
+      });
+
+      if (existingAdmin) {
+        await db.collection('users').updateOne(
+          { _id: existingAdmin._id },
+          {
+            $set: {
+              role: 'admin',
+              status: 'active',
+              isDeleted: false,
+              updatedAt: now,
+            },
+            $unset: { suspendedAt: '', suspendedReason: '' },
+          },
+        );
+      } else {
+        await db.collection('users').insertOne({
+          email: adminEmail,
+          passwordHash: hashSync(adminPassword, 10),
+          name: adminName,
+          role: 'admin',
+          status: 'active',
+          tokenVersion: 0,
+          totalPoints: 0,
+          streak: { current: 0, longest: 0 },
+          preferences: { theme: 'light', language: 'vi' },
+          isDeleted: false,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+
+      console.log(`Da san sang tai khoan admin: ${adminEmail}`);
+    } else {
+      console.log(
+        'Bo qua admin seed vi thieu ADMIN_EMAIL hoac ADMIN_PASSWORD.',
+      );
+    }
+
     await db.collection('decks').insertOne({
       _id: deckId,
       title: 'Tu vung IELTS Cong Nghe Thong Tin',
       description: 'Bo the mau ve chu de Tech & AI.',
       visibility: 'public',
+      moderationStatus: 'active',
       createdBy: studentId,
       sourceType: 'ai',
       tags: ['IELTS', 'Tech', 'AI', 'Vocab'],
@@ -368,6 +420,26 @@ async function runSeed(): Promise<void> {
       },
     ]);
     console.log('Da tao study session va card reviews mau.');
+
+    await db
+      .collection('users')
+      .updateMany(
+        { status: { $exists: false } },
+        { $set: { status: 'active' } },
+      );
+    await db
+      .collection('users')
+      .updateMany(
+        { tokenVersion: { $exists: false } },
+        { $set: { tokenVersion: 0 } },
+      );
+    await db
+      .collection('decks')
+      .updateMany(
+        { moderationStatus: { $exists: false } },
+        { $set: { moderationStatus: 'active' } },
+      );
+    console.log('Da backfill status cho user va deck cu.');
 
     console.log('Seed du lieu thanh cong.');
   } finally {

@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  ParseArrayPipe,
   UseGuards,
 } from '@nestjs/common';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -36,6 +37,16 @@ export class StudyController {
     @CurrentUser('id') userId: string,
   ) {
     return this.studyService.logReview(logCardReviewDto, userId);
+  }
+
+  @Post('reviews/sync')
+  @HttpCode(HttpStatus.OK)
+  syncReviews(
+    @Body(new ParseArrayPipe({ items: LogCardReviewDto }))
+    logCardReviewDtos: LogCardReviewDto[],
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.studyService.syncReviews(logCardReviewDtos, userId);
   }
 
   @Patch('sessions/:sessionId/finish')

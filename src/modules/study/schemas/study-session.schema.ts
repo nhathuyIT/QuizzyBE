@@ -56,3 +56,6 @@ export class StudySession {
 }
 
 export const StudySessionSchema = SchemaFactory.createForClass(StudySession);
+
+StudySessionSchema.index({ startedAt: -1, mode: 1, finishedAt: 1 });
+StudySessionSchema.index({ userId: 1, startedAt: -1 });

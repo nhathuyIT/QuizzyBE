@@ -44,11 +44,26 @@ export class User {
   @Prop({ default: 'student', enum: ['student', 'teacher', 'admin'] })
   role!: string;
 
+  @Prop({ default: 'active', enum: ['active', 'suspended'], index: true })
+  status!: 'active' | 'suspended';
+
+  @Prop({ type: Date })
+  suspendedAt?: Date;
+
+  @Prop()
+  suspendedReason?: string;
+
+  @Prop({ type: Date, index: true })
+  lastLoginAt?: Date;
+
   @Prop()
   avatarUrl?: string;
 
   @Prop({ default: 0 })
   totalPoints!: number;
+
+  @Prop({ default: 0 })
+  tokenVersion!: number;
 
   @Prop({ type: StreakInfo, default: () => ({ current: 0, longest: 0 }) })
   streak!: StreakInfo;
@@ -64,3 +79,6 @@ export class User {
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
+
+UserSchema.index({ role: 1, status: 1, createdAt: -1 });
+UserSchema.index({ isDeleted: 1, createdAt: -1 });

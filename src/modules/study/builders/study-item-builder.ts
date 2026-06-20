@@ -37,6 +37,7 @@ export class StudyItemsBuilder {
       type: 'written',
       prompt: card.front,
       hint: card.hint,
+      correctAnswer: card.back,
     }));
   }
 
@@ -49,6 +50,7 @@ export class StudyItemsBuilder {
         questionId: this.getDocumentId(card),
         type,
         prompt: card.front,
+        correctAnswer: card.back,
         options:
           type === 'multiple_choice'
             ? this.buildMultipleChoiceOptions(cards, card)

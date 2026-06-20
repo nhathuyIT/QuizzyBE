@@ -92,7 +92,7 @@ export class DeckService {
     await this.validateDeckOwner(deckId, userId);
     const deck = await this.deckRepository.updateById(deckId, updateDeckDto);
 
-    if (!deck) {
+    if (!deck || deck.deletedAt) {
       throw new NotFoundException('Deck not found');
     }
 
@@ -121,7 +121,7 @@ export class DeckService {
     this.assertValidDeckId(deckId);
 
     const deck = await this.deckRepository.findById(deckId);
-    if (!deck) {
+    if (!deck || deck.deletedAt) {
       throw new NotFoundException('Deck not found');
     }
 
@@ -158,15 +158,20 @@ export class DeckService {
   }
 
   private canAccessDeck(deck: DeckDocument, userId: string) {
+    const isOwner = deck.createdBy.toString() === userId;
     return (
-      deck.visibility !== 'private' || deck.createdBy.toString() === userId
+      !deck.deletedAt &&
+      (isOwner ||
+        (deck.visibility !== 'private' && deck.moderationStatus !== 'hidden'))
     );
   }
 
   private canReadDeck(deck: DeckDocument, userId?: string) {
+    const isOwner = userId ? deck.createdBy.toString() === userId : false;
     return (
-      deck.visibility !== 'private' ||
-      (userId ? deck.createdBy.toString() === userId : false)
+      !deck.deletedAt &&
+      (isOwner ||
+        (deck.visibility !== 'private' && deck.moderationStatus !== 'hidden'))
     );
   }
 

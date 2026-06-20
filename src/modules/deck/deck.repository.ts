@@ -159,7 +159,9 @@ export class DeckRepository {
 
   private buildBaseSearchFilter(searchDeckDto: SearchDeckDto) {
     const { keyword, visibility } = searchDeckDto;
-    const filter: Record<string, unknown> = {};
+    const filter: Record<string, unknown> = {
+      deletedAt: { $exists: false },
+    };
 
     if (keyword) {
       filter.$text = { $search: keyword };
@@ -177,11 +179,17 @@ export class DeckRepository {
     const accessFilter = userId
       ? {
           $or: [
-            { visibility: { $ne: 'private' } },
             { createdBy: new Types.ObjectId(userId) },
+            {
+              visibility: { $ne: 'private' },
+              moderationStatus: { $ne: 'hidden' },
+            },
           ],
         }
-      : { visibility: { $ne: 'private' } };
+      : {
+          visibility: { $ne: 'private' },
+          moderationStatus: { $ne: 'hidden' },
+        };
 
     if (filter.visibility) {
       filter.$and = [accessFilter];

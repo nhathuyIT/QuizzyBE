@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { ClientSession, Model, Types } from 'mongoose';
 import { Card, CardDocument } from '../card/schemas/card.schema';
 import { Deck, DeckDocument } from '../deck/schemas/deck.schema';
 import { CreateStudySessionDto } from './dto/create-study-session.dto';
@@ -11,6 +11,16 @@ import {
   StudySessionDocument,
 } from './schemas/study-session.schema';
 import { ReviewRating } from '../../common/enums/review-ratings.enum';
+
+export interface ResolvedCardReviewInput {
+  sessionId: string;
+  cardId: string;
+  userAnswer?: string;
+  rating: ReviewRating;
+  isCorrect: boolean;
+  responseTimeMs?: number;
+  clientReviewId?: string;
+}
 
 @Injectable()
 export class StudyRepository {
@@ -122,8 +132,60 @@ export class StudyRepository {
       answer: logCardReviewDto.userAnswer,
       isCorrect,
       rating,
+      clientReviewId: logCardReviewDto.clientReviewId,
       responseTimeMs: logCardReviewDto.responseTimeMs ?? 0,
     });
+  }
+
+  async createReviewsBulk(
+    reviews: ResolvedCardReviewInput[],
+    userId: string,
+    session?: ClientSession,
+  ): Promise<CardReviewDocument[]> {
+    if (reviews.length === 0) {
+      return [];
+    }
+
+    return this.cardReviewModel.insertMany(
+      reviews.map((review) => ({
+        userId: new Types.ObjectId(userId),
+        sessionId: new Types.ObjectId(review.sessionId),
+        cardId: new Types.ObjectId(review.cardId),
+        answer: review.userAnswer,
+        isCorrect: review.isCorrect,
+        rating: review.rating,
+        clientReviewId: review.clientReviewId,
+        responseTimeMs: review.responseTimeMs ?? 0,
+      })),
+      { ordered: true, session },
+    );
+  }
+
+  async findExistingClientReviewIds(
+    userId: string,
+    sessionId: string,
+    clientReviewIds: string[],
+  ): Promise<Set<string>> {
+    if (clientReviewIds.length === 0) {
+      return new Set();
+    }
+
+    const reviews = await this.cardReviewModel
+      .find({
+        userId: new Types.ObjectId(userId),
+        sessionId: new Types.ObjectId(sessionId),
+        clientReviewId: { $in: clientReviewIds },
+      })
+      .select('clientReviewId')
+      .exec();
+
+    return new Set(
+      reviews
+        .map((review) => review.clientReviewId)
+        .filter((clientReviewId): clientReviewId is string =>
+          Boolean(clientReviewId),
+        ),
+    );
   }
 
   async updateSessionStats(sessionId: string, isCorrect: boolean) {
@@ -137,6 +199,25 @@ export class StudyRepository {
           },
         },
         { new: true },
+      )
+      .exec();
+  }
+
+  async updateSessionStatsBulk(
+    sessionId: string,
+    stats: { correct: number; wrong: number },
+    session?: ClientSession,
+  ) {
+    return this.studySessionModel
+      .findByIdAndUpdate(
+        sessionId,
+        {
+          $inc: {
+            'stats.correct': stats.correct,
+            'stats.wrong': stats.wrong,
+          },
+        },
+        { new: true, session },
       )
       .exec();
   }

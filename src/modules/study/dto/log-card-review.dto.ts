@@ -26,6 +26,11 @@ export class LogCardReviewDto {
   })
   @IsOptional()
   rating?: 'again' | 'hard' | 'good' | 'easy';
+
+  @IsString({ message: 'clientReviewId must be a string' })
+  @IsOptional()
+  clientReviewId?: string;
+
   @IsNumber()
   @Min(0, { message: 'responseTimeMs must be a non-negative number' })
   @IsOptional()

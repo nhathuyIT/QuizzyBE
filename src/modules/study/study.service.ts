@@ -4,8 +4,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Types } from 'mongoose';
+import { InjectConnection } from '@nestjs/mongoose';
+import { Connection, Types } from 'mongoose';
 import { ReviewRating } from '../../common/enums/review-ratings.enum';
+import { CardProgressUpdate } from '../card-progress/card-progress.repository';
 import { CardProgressDocument } from '../card-progress/schemas/card-progress.schema';
 import { CardProgressService } from '../card-progress/card-progress.service';
 import { CardDocument } from '../card/schemas/card.schema';
@@ -21,6 +23,7 @@ export class StudyService {
     private readonly studyRepository: StudyRepository,
     private readonly cardProgressService: CardProgressService,
     private readonly studyItemsBuilder: StudyItemsBuilder,
+    @InjectConnection() private readonly connection: Connection,
   ) {}
 
   async createSession(
@@ -132,13 +135,139 @@ export class StudyService {
     };
   }
 
+  async syncReviews(logCardReviewDtos: LogCardReviewDto[], userId: string) {
+    if (logCardReviewDtos.length === 0) {
+      return {
+        synced: 0,
+        skipped: 0,
+        results: [],
+      };
+    }
+
+    const sessionId = logCardReviewDtos[0].sessionId;
+
+    if (logCardReviewDtos.some((review) => review.sessionId !== sessionId)) {
+      throw new BadRequestException(
+        'A review sync batch must belong to one study session',
+      );
+    }
+
+    const session = await this.getOwnedSession(sessionId, userId);
+
+    if (session.finishedAt) {
+      throw new BadRequestException('Study session is already finished');
+    }
+
+    const existingClientReviewIds =
+      await this.studyRepository.findExistingClientReviewIds(
+        userId,
+        sessionId,
+        logCardReviewDtos
+          .map((review) => review.clientReviewId)
+          .filter((clientReviewId): clientReviewId is string =>
+            Boolean(clientReviewId),
+          ),
+      );
+    const reviewsToSync = logCardReviewDtos.filter(
+      (review) =>
+        !review.clientReviewId ||
+        !existingClientReviewIds.has(review.clientReviewId),
+    );
+
+    if (reviewsToSync.length === 0) {
+      return {
+        synced: 0,
+        skipped: logCardReviewDtos.length,
+        results: [],
+      };
+    }
+
+    const cards = await this.studyRepository.findCardsByIds(
+      Array.from(new Set(reviewsToSync.map((review) => review.cardId))),
+    );
+    const cardsById = new Map(
+      cards.map((card) => [this.getDocumentId(card), card]),
+    );
+    const resolvedReviews = reviewsToSync.map((review) => {
+      const card = cardsById.get(review.cardId);
+
+      if (!card) {
+        throw new NotFoundException('Card not found');
+      }
+
+      if (!this.objectIdEquals(card.deckId, session.deckId)) {
+        throw new ForbiddenException(
+          'Card does not belong to this session deck',
+        );
+      }
+
+      const { isCorrect, rating } = this.resolveReviewResult(
+        session.mode,
+        review,
+        card,
+      );
+
+      return {
+        review,
+        card,
+        resolvedReview: {
+          ...review,
+          isCorrect,
+          rating,
+        },
+      };
+    });
+    const correct = resolvedReviews.filter(
+      ({ resolvedReview }) => resolvedReview.isCorrect,
+    ).length;
+    const wrong = resolvedReviews.length - correct;
+
+    return this.connection.transaction(async (mongoSession) => {
+      const insertedReviews = await this.studyRepository.createReviewsBulk(
+        resolvedReviews.map(({ resolvedReview }) => resolvedReview),
+        userId,
+        mongoSession,
+      );
+      const progressUpdates =
+        await this.cardProgressService.applyReviewProgressBatch({
+          userId,
+          deckId: session.deckId.toString(),
+          reviews: resolvedReviews.map(({ resolvedReview }) => ({
+            cardId: resolvedReview.cardId,
+            isCorrect: resolvedReview.isCorrect,
+            rating: resolvedReview.rating,
+          })),
+          session: mongoSession,
+        });
+
+      await this.studyRepository.updateSessionStatsBulk(
+        sessionId,
+        { correct, wrong },
+        mongoSession,
+      );
+
+      return {
+        synced: insertedReviews.length,
+        skipped: logCardReviewDtos.length - insertedReviews.length,
+        results: resolvedReviews.map(({ card, resolvedReview }, index) => ({
+          reviewId: this.getDocumentId(insertedReviews[index]),
+          cardId: resolvedReview.cardId,
+          isCorrect: resolvedReview.isCorrect,
+          correctAnswer: card.back,
+          explanation: card.explanation,
+          progressUpdate: this.toProgressUpdate(progressUpdates[index]),
+        })),
+      };
+    });
+  }
+
   async finishSession(sessionId: string, userId: string) {
     const session = await this.getOwnedSession(sessionId, userId);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
     const startedAt = session.startedAt ?? new Date();
     const timeSpentSec = Math.max(
       0,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+
       Math.floor((Date.now() - startedAt.getTime()) / 1000),
     );
     const finishedSession = await this.studyRepository.finishSession(
@@ -209,9 +338,11 @@ export class StudyService {
     };
   }
 
-  private toProgressUpdate(progress: CardProgressDocument) {
+  private toProgressUpdate(
+    progress: CardProgressDocument | CardProgressUpdate,
+  ) {
     return {
-      status: progress.status,
+      status: progress.status as CardProgressUpdate['status'],
       mastery: progress.mastery,
       easeFactor: progress.easeFactor,
       intervalDays: progress.intervalDays,
@@ -220,9 +351,11 @@ export class StudyService {
   }
 
   private canAccessDeck(deck: DeckDocument, userId: string) {
+    const isOwner = this.objectIdEquals(deck.createdBy, userId);
     return (
-      deck.visibility !== 'private' ||
-      this.objectIdEquals(deck.createdBy, userId)
+      !deck.deletedAt &&
+      (isOwner ||
+        (deck.visibility !== 'private' && deck.moderationStatus !== 'hidden'))
     );
   }
 

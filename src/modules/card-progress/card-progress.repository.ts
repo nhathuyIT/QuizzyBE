@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { ClientSession, Model, Types } from 'mongoose';
 import { Card, CardDocument } from '../card/schemas/card.schema';
 import { Deck, DeckDocument } from '../deck/schemas/deck.schema';
 import { UpsertCardProgressDto } from './dto/upsert-card-progress.dto';
@@ -71,6 +71,27 @@ export class CardProgressRepository {
       .exec();
   }
 
+  async findByUserAndCards(
+    userId: string,
+    cardIds: string[],
+    session?: ClientSession,
+  ): Promise<CardProgressDocument[]> {
+    if (cardIds.length === 0) {
+      return [];
+    }
+
+    const query = this.cardProgressModel.find({
+      userId: new Types.ObjectId(userId),
+      cardId: { $in: cardIds.map((cardId) => new Types.ObjectId(cardId)) },
+    });
+
+    if (session) {
+      query.session(session);
+    }
+
+    return query.exec();
+  }
+
   async upsertReviewProgress(
     userId: string,
     deckId: string,
@@ -96,6 +117,47 @@ export class CardProgressRepository {
         { new: true, upsert: true },
       )
       .exec();
+  }
+
+  async bulkUpsertReviewProgress(
+    userId: string,
+    deckId: string,
+    updates: Array<{ cardId: string; progress: CardProgressUpdate }>,
+    session?: ClientSession,
+  ): Promise<void> {
+    if (updates.length === 0) {
+      return;
+    }
+
+    const userObjectId = new Types.ObjectId(userId);
+    const deckObjectId = new Types.ObjectId(deckId);
+
+    await this.cardProgressModel.bulkWrite(
+      updates.map(({ cardId, progress }) => {
+        const cardObjectId = new Types.ObjectId(cardId);
+
+        return {
+          updateOne: {
+            filter: {
+              userId: userObjectId,
+              cardId: cardObjectId,
+            },
+            update: {
+              $set: {
+                ...progress,
+                deckId: deckObjectId,
+              },
+              $setOnInsert: {
+                userId: userObjectId,
+                cardId: cardObjectId,
+              },
+            },
+            upsert: true,
+          },
+        };
+      }),
+      { ordered: true, session },
+    );
   }
 
   async initializeDeckProgress(userId: string, deckId: string): Promise<void> {

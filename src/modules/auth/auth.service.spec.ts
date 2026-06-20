@@ -11,6 +11,7 @@ describe('AuthService', () => {
     createUser: jest.fn(),
     findByEmail: jest.fn(),
     findById: jest.fn(),
+    invalidateTokens: jest.fn(),
   };
   const jwtServiceMock = {
     signAsync: jest.fn(),
@@ -83,5 +84,14 @@ describe('AuthService', () => {
         role: 'student',
       }),
     );
+  });
+
+  it('revokes active tokens when logging out', async () => {
+    userServiceMock.invalidateTokens.mockResolvedValue({});
+
+    await expect(service.logout('user-id')).resolves.toEqual({
+      loggedOut: true,
+    });
+    expect(userServiceMock.invalidateTokens).toHaveBeenCalledWith('user-id');
   });
 });

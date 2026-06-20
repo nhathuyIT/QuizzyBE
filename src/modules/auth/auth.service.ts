@@ -58,7 +58,13 @@ export class AuthService {
       throw new UnauthorizedException('Email hoặc mật khẩu không chính xác');
     }
 
-    return this.buildAuthResponse(user);
+    if (user.status === 'suspended' || user.isDeleted) {
+      throw new UnauthorizedException('Account is unavailable');
+    }
+
+    const loggedInUser = await this.userService.markLogin(user._id.toString());
+
+    return this.buildAuthResponse(loggedInUser);
   }
 
   async me(userId: string): Promise<AuthUserResponse> {
@@ -67,11 +73,18 @@ export class AuthService {
     return this.toAuthUser(user);
   }
 
+  async logout(userId: string) {
+    await this.userService.invalidateTokens(userId);
+
+    return { loggedOut: true };
+  }
+
   private async buildAuthResponse(user: UserDocument): Promise<AuthResponse> {
     const payload: JwtPayload = {
       sub: user._id.toString(),
       email: user.email,
       role: user.role as RoleType,
+      tokenVersion: user.tokenVersion ?? 0,
     };
 
     return {

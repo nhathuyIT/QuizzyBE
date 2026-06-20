@@ -49,15 +49,15 @@ Quizzy.postman_collection.json
 
 Collection variables can quan tam:
 
-| Variable | Y nghia |
-| --- | --- |
-| `baseUrl` | Mac dinh `http://localhost:3001` |
-| `accessToken` | Duoc luu sau request `Authentication -> Login User` |
-| `deckId` | Duoc luu sau `Decks -> Create Deck` |
-| `cardId` | Duoc luu sau `Cards -> Create Card`, `Create Bulk Cards`, `Study - Get Session Items`, hoac `Card Progress - Get Due Cards` |
-| `studySessionId` | Duoc luu sau request start session |
-| `studyMode` | Duoc luu sau request start session |
-| `reviewId` | Duoc luu sau request log review |
+| Variable         | Y nghia                                                                                                                     |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `baseUrl`        | Mac dinh `http://localhost:3001`                                                                                            |
+| `accessToken`    | Duoc luu sau request `Authentication -> Login User`                                                                         |
+| `deckId`         | Duoc luu sau `Decks -> Create Deck`                                                                                         |
+| `cardId`         | Duoc luu sau `Cards -> Create Card`, `Create Bulk Cards`, `Study - Get Session Items`, hoac `Card Progress - Get Due Cards` |
+| `studySessionId` | Duoc luu sau request start session                                                                                          |
+| `studyMode`      | Duoc luu sau request start session                                                                                          |
+| `reviewId`       | Duoc luu sau request log review                                                                                             |
 
 Thu tu chay co ban trong Postman:
 
@@ -274,12 +274,12 @@ Backend khong can `userAnswer` trong flashcard mode.
 
 Mapping hien tai:
 
-| Rating | isCorrect | SRS |
-| --- | --- | --- |
-| `again` | false | mastery -10, due today |
-| `hard` | true | mastery +5, due in 1 day |
-| `good` | true | mastery +15, due in 3 days |
-| `easy` | true | mastery +25, due in 7 days |
+| Rating  | isCorrect | SRS                        |
+| ------- | --------- | -------------------------- |
+| `again` | false     | mastery -10, due today     |
+| `hard`  | true      | mastery +5, due in 1 day   |
+| `good`  | true      | mastery +15, due in 3 days |
+| `easy`  | true      | mastery +25, due in 7 days |
 
 ### 5.2 Learn/Test Written Review
 
@@ -464,11 +464,11 @@ Log Review se tao lich su trong card_reviews, cap nhat stats cua study_sessions,
 
 Vai tro cua 3 collection study:
 
-| Collection | Vai tro |
-| --- | --- |
-| `study_sessions` | Luu mot lan user vao hoc mot deck |
-| `card_reviews` | Luu tung lan user tra loi/danh gia card |
-| `card_progress` | Luu trang thai moi nhat cua user voi card, dung cho SRS va due cards |
+| Collection       | Vai tro                                                              |
+| ---------------- | -------------------------------------------------------------------- |
+| `study_sessions` | Luu mot lan user vao hoc mot deck                                    |
+| `card_reviews`   | Luu tung lan user tra loi/danh gia card                              |
+| `card_progress`  | Luu trang thai moi nhat cua user voi card, dung cho SRS va due cards |
 
 ## 9. Loi Hay Gap Khi Test
 

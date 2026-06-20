@@ -1,5 +1,5 @@
 import { NotFoundException } from '@nestjs/common';
-import { Types } from 'mongoose';
+import { Connection, Types } from 'mongoose';
 import { CardProgressService } from '../card-progress/card-progress.service';
 import { StudyItemsBuilder } from './builders/study-item-builder';
 import { StudyRepository } from './study.repository';
@@ -23,6 +23,9 @@ describe('StudyService', () => {
   let studyItemsBuilder: {
     build: jest.Mock;
   };
+  let connection: {
+    transaction: jest.Mock;
+  };
 
   beforeEach(() => {
     studyRepository = {
@@ -41,10 +44,14 @@ describe('StudyService', () => {
     studyItemsBuilder = {
       build: jest.fn(),
     };
+    connection = {
+      transaction: jest.fn(),
+    };
     service = new StudyService(
       studyRepository as unknown as StudyRepository,
       cardProgressService as unknown as CardProgressService,
       studyItemsBuilder as unknown as StudyItemsBuilder,
+      connection as unknown as Connection,
     );
   });
 

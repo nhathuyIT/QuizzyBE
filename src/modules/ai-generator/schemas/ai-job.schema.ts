@@ -48,7 +48,7 @@ export class AiGenerationJob {
   options!: JobOptions;
 
   @Prop({ type: MongooseSchema.Types.Mixed })
-  usage?: { inputTokens: number; outputTokens: number };
+  usage?: { inputTokens?: number; outputTokens?: number };
 
   @Prop()
   errorMessage?: string;

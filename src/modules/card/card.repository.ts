@@ -16,6 +16,9 @@ export class CardRepository {
     return this.cardModel.create({
       ...createCardDto,
       deckId: new Types.ObjectId(createCardDto.deckId),
+      aiJobId: createCardDto.aiJobId
+        ? new Types.ObjectId(createCardDto.aiJobId)
+        : undefined,
     });
   }
 
@@ -24,6 +27,7 @@ export class CardRepository {
       cards.map((card) => ({
         ...card,
         deckId: new Types.ObjectId(card.deckId),
+        aiJobId: card.aiJobId ? new Types.ObjectId(card.aiJobId) : undefined,
         examples: card.examples ?? [],
       })),
     );

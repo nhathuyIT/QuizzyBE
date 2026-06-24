@@ -12,6 +12,7 @@ import { StudyModule } from './modules/study/study.module';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { ChatbotModule } from './modules/chatbot/chatbot.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { AdminModule } from './modules/admin/admin.module';
     CardProgressModule,
     AuthModule,
     AdminModule,
+    ChatbotModule,
   ],
   controllers: [AppController],
   providers: [

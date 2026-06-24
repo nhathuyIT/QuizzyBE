@@ -30,8 +30,11 @@ export class CardController {
     return this.cardService.createBulkCards(createBulkCardsDto, user.id);
   }
   @Get('deck/:deckId')
-  findByDeckId(@Param('deckId', new ParseMongoIdPipe()) deckId: string) {
-    return this.cardService.findByDeckId(deckId);
+  findByDeckId(
+    @Param('deckId', new ParseMongoIdPipe()) deckId: string,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.cardService.findByDeckId(deckId, user.id);
   }
   @Get(':id')
   findById(@Param('id', new ParseMongoIdPipe()) id: string) {

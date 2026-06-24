@@ -85,6 +85,36 @@
       "key": "adminStudySessionId",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "chatConversationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "chatMessageId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "chatAssistantMessageId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "aiJobId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "aiSourceId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "generatedDeckId",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -2194,6 +2224,635 @@
                 "finish"
               ]
             }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Chatbot AI",
+      "description": "AI chatbot APIs. Run Authentication/Login User first to save accessToken. For generate APIs, Redis must be running and GEMINI_API_KEY must be valid.",
+      "item": [
+        {
+          "name": "Chatbot - Create Conversation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201 or 200', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "const conversationId = json?.data?._id;",
+                  "if (conversationId) {",
+                  "  pm.collectionVariables.set('chatConversationId', conversationId);",
+                  "}",
+                  "",
+                  "pm.test('chatConversationId is saved', function () {",
+                  "  pm.expect(pm.collectionVariables.get('chatConversationId')).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Test AI bot\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/chatbot/conversations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "chatbot",
+                "conversations"
+              ]
+            },
+            "description": "Creates a normal AI chat conversation and saves chatConversationId."
+          },
+          "response": []
+        },
+        {
+          "name": "Chatbot - Create Deck Conversation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201 or 200', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "const conversationId = json?.data?._id;",
+                  "if (conversationId) {",
+                  "  pm.collectionVariables.set('chatConversationId', conversationId);",
+                  "}",
+                  "",
+                  "pm.test('chatConversationId is saved', function () {",
+                  "  pm.expect(pm.collectionVariables.get('chatConversationId')).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Ask about this deck\",\n  \"deckId\": \"{{deckId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/chatbot/conversations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "chatbot",
+                "conversations"
+              ]
+            },
+            "description": "Creates a conversation attached to deckId so AI can use flashcard context."
+          },
+          "response": []
+        },
+        {
+          "name": "Chatbot - List Conversations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/chatbot/conversations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "chatbot",
+                "conversations"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Lists current user chatbot conversations."
+          },
+          "response": []
+        },
+        {
+          "name": "Chatbot - Get Conversation Detail",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/chatbot/conversations/{{chatConversationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "chatbot",
+                "conversations",
+                "{{chatConversationId}}"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Gets one conversation and paginated messages."
+          },
+          "response": []
+        },
+        {
+          "name": "Chatbot - Send Message",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201 or 200', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "const userMessageId = json?.data?.userMessage?._id;",
+                  "const assistantMessageId = json?.data?.assistantMessage?._id;",
+                  "if (userMessageId) pm.collectionVariables.set('chatMessageId', userMessageId);",
+                  "if (assistantMessageId) pm.collectionVariables.set('chatAssistantMessageId', assistantMessageId);",
+                  "",
+                  "pm.test('assistant response exists', function () {",
+                  "  pm.expect(json?.data?.assistantMessage?.content).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Gi?i th�ch spaced repetition l� g�?\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/chatbot/conversations/{{chatConversationId}}/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "chatbot",
+                "conversations",
+                "{{chatConversationId}}",
+                "messages"
+              ]
+            },
+            "description": "Sends a message to the selected conversation. Requires GEMINI_API_KEY to work."
+          },
+          "response": []
+        },
+        {
+          "name": "Chatbot - List Messages",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/chatbot/conversations/{{chatConversationId}}/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "chatbot",
+                "conversations",
+                "{{chatConversationId}}",
+                "messages"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Lists messages in the selected conversation."
+          },
+          "response": []
+        },
+        {
+          "name": "Chatbot - Update Conversation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated AI bot chat\",\n  \"isArchived\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/chatbot/conversations/{{chatConversationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "chatbot",
+                "conversations",
+                "{{chatConversationId}}"
+              ]
+            },
+            "description": "Updates conversation title/archive status."
+          },
+          "response": []
+        },
+        {
+          "name": "Chatbot - Generate Flashcards From Text",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201 or 200', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json?.data?.jobId) pm.collectionVariables.set('aiJobId', json.data.jobId);",
+                  "if (json?.data?.sourceId) pm.collectionVariables.set('aiSourceId', json.data.sourceId);",
+                  "",
+                  "pm.test('aiJobId is saved', function () {",
+                  "  pm.expect(pm.collectionVariables.get('aiJobId')).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"OOP Basics AI Deck\",\n  \"rawText\": \"Object-oriented programming is a programming paradigm based on objects. A class defines the structure and behavior of objects. Encapsulation hides internal state. Inheritance allows a class to reuse behavior from another class. Polymorphism allows objects to be treated through a common interface. These concepts help developers organize complex software systems.\",\n  \"cardCount\": 5,\n  \"difficulty\": \"medium\",\n  \"language\": \"vi\",\n  \"conversationId\": \"{{chatConversationId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/chatbot/generate/text",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "chatbot",
+                "generate",
+                "text"
+              ]
+            },
+            "description": "Queues AI flashcard generation from raw text. Requires Redis and Gemini. Saves aiJobId."
+          },
+          "response": []
+        },
+        {
+          "name": "Chatbot - Generate Flashcards From PDF",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201 or 200', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json?.data?.jobId) pm.collectionVariables.set('aiJobId', json.data.jobId);",
+                  "if (json?.data?.sourceId) pm.collectionVariables.set('aiSourceId', json.data.sourceId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "title",
+                  "value": "PDF AI Deck",
+                  "type": "text"
+                },
+                {
+                  "key": "cardCount",
+                  "value": "5",
+                  "type": "text"
+                },
+                {
+                  "key": "difficulty",
+                  "value": "medium",
+                  "type": "text"
+                },
+                {
+                  "key": "language",
+                  "value": "vi",
+                  "type": "text"
+                },
+                {
+                  "key": "conversationId",
+                  "value": "{{chatConversationId}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/chatbot/generate/pdf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "chatbot",
+                "generate",
+                "pdf"
+              ]
+            },
+            "description": "Queues AI flashcard generation from a PDF. In Postman, choose a PDF file in the file field before sending."
+          },
+          "response": []
+        },
+        {
+          "name": "Chatbot - Get Generate Job Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json?.data?.targetDeckId) pm.collectionVariables.set('generatedDeckId', json.data.targetDeckId);",
+                  "pm.test('job status exists', function () {",
+                  "  pm.expect(json?.data?.status).to.be.oneOf(['queued', 'running', 'done', 'failed']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/chatbot/generate/jobs/{{aiJobId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "chatbot",
+                "generate",
+                "jobs",
+                "{{aiJobId}}"
+              ]
+            },
+            "description": "Poll this after generate/text or generate/pdf. When status is done, generatedDeckId is saved."
+          },
+          "response": []
+        },
+        {
+          "name": "Chatbot - Delete Conversation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/chatbot/conversations/{{chatConversationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "chatbot",
+                "conversations",
+                "{{chatConversationId}}"
+              ]
+            },
+            "description": "Soft deletes the selected conversation."
           },
           "response": []
         }

@@ -42,4 +42,8 @@ export class CreateCardDto {
   @Min(0, { message: 'Vị trí thẻ phải lớn hơn hoặc bằng 0' })
   @IsNotEmpty({ message: 'Vị trí thẻ không được để trống' })
   position!: number;
+
+  @IsMongoId({ message: 'AI job id is invalid' })
+  @IsOptional()
+  aiJobId?: string;
 }

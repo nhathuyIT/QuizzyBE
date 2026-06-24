@@ -77,4 +77,41 @@ export class AiGeneratorRepository {
       .findByIdAndUpdate(id, update, { new: true })
       .exec();
   }
+
+  async markJobDone(
+    id: string,
+    params: {
+      targetDeckId?: string;
+      usage?: { inputTokens?: number; outputTokens?: number };
+    },
+  ): Promise<AiGenerationJobDocument | null> {
+    const update: Record<string, unknown> = {
+      status: 'done',
+      finishedAt: new Date(),
+    };
+
+    if (params.targetDeckId) {
+      update.targetDeckId = new Types.ObjectId(params.targetDeckId);
+    }
+
+    if (params.usage) {
+      update.usage = params.usage;
+    }
+
+    return this.aiGenerationJobModel
+      .findByIdAndUpdate(id, update, { new: true })
+      .exec();
+  }
+
+  async countJobsByUserAndStatuses(
+    userId: string,
+    statuses: Array<'queued' | 'running' | 'done' | 'failed'>,
+  ): Promise<number> {
+    return this.aiGenerationJobModel
+      .countDocuments({
+        userId: new Types.ObjectId(userId),
+        status: { $in: statuses },
+      })
+      .exec();
+  }
 }

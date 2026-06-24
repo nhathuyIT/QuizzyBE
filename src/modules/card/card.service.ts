@@ -51,8 +51,8 @@ export class CardService {
   async findAll() {
     return this.cardRepository.findAll();
   }
-  async findByDeckId(deckId: string) {
-    await this.deckService.findById(deckId);
+  async findByDeckId(deckId: string, userId: string) {
+    await this.deckService.findById(deckId, userId);
     return this.cardRepository.findByDeckId(deckId);
   }
   async findById(id: string) {
@@ -70,8 +70,12 @@ export class CardService {
 
     return card;
   }
-  async findDeckCards(deckId: string, searchDeckCardsDto: SearchDeckCardsDto) {
-    await this.deckService.findById(deckId);
+  async findDeckCards(
+    deckId: string,
+    searchDeckCardsDto: SearchDeckCardsDto,
+    userId: string,
+  ) {
+    await this.deckService.findById(deckId, userId);
 
     const [cards, itemCount] = await this.cardRepository.findByDeckIdPaginated(
       deckId,

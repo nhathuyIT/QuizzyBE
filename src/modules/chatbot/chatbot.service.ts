@@ -54,6 +54,7 @@ import { AcademicDocumentStorageService } from './services/academic-document-sto
 import { PdfParserService } from './services/pdf-parser.service';
 
 const MAX_ACADEMIC_DOCUMENT_FILE_SIZE = 10 * 1024 * 1024;
+const DEFAULT_ACTIVE_JOB_TTL_MS = 30 * 60 * 1000;
 
 export interface UploadedPdfFile {
   buffer: Buffer;
@@ -392,6 +393,8 @@ export class ChatbotService {
       await this.getOwnedConversation(params.conversationId, userId);
     }
 
+    await this.expireStaleActiveJobs(userId);
+
     const activeJobs =
       await this.aiGeneratorRepository.countJobsByUserAndStatuses(userId, [
         'queued',
@@ -429,29 +432,49 @@ export class ChatbotService {
         prompt,
       );
 
-    const bullJob = await this.generateQueue.add(
-      FLASHCARD_GENERATE_JOB,
-      {
-        jobId: job._id.toString(),
-        sourceId: source._id.toString(),
-        userId,
-        title: params.title,
-        content: params.content,
-        sourceType: params.type,
-        academicDocumentId: params.academicDocumentId,
-        subjectId: params.subjectId,
-        deckDescription: params.deckDescription,
-        deckTags: params.deckTags,
-        options,
-        conversationId: params.conversationId,
-      },
-      {
-        attempts: 3,
-        backoff: { type: 'exponential', delay: 5000 },
-        removeOnComplete: { age: 86400, count: 1000 },
-        removeOnFail: { age: 604800 },
-      },
-    );
+    let bullJobId: string | undefined;
+
+    try {
+      const bullJob = await this.generateQueue.add(
+        FLASHCARD_GENERATE_JOB,
+        {
+          jobId: job._id.toString(),
+          sourceId: source._id.toString(),
+          userId,
+          title: params.title,
+          content: params.content,
+          sourceType: params.type,
+          academicDocumentId: params.academicDocumentId,
+          subjectId: params.subjectId,
+          deckDescription: params.deckDescription,
+          deckTags: params.deckTags,
+          options,
+          conversationId: params.conversationId,
+        },
+        {
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 5000 },
+          removeOnComplete: { age: 86400, count: 1000 },
+          removeOnFail: { age: 604800 },
+        },
+      );
+
+      bullJobId = bullJob.id;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown queue error';
+
+      this.logger.error(`Could not queue flashcard generation: ${errorMessage}`);
+      await this.aiGeneratorRepository.updateJobStatus(
+        job._id.toString(),
+        'failed',
+        'Could not start flashcard generation',
+      );
+
+      throw new ServiceUnavailableException(
+        'Could not start flashcard generation',
+      );
+    }
 
     if (params.conversationId) {
       await this.chatbotRepository.createMessage({
@@ -462,7 +485,7 @@ export class ChatbotService {
         metadata: {
           aiJobId: job._id.toString(),
           sourceId: source._id.toString(),
-          bullJobId: bullJob.id,
+          bullJobId,
           status: 'queued',
         },
       });
@@ -471,9 +494,29 @@ export class ChatbotService {
     return {
       jobId: job._id.toString(),
       sourceId: source._id.toString(),
-      bullJobId: bullJob.id,
+      bullJobId,
       status: job.status,
     };
+  }
+
+  private async expireStaleActiveJobs(userId: string) {
+    const ttlMs = this.getPositiveIntConfig(
+      'AI_GENERATION_ACTIVE_JOB_TTL_MS',
+      DEFAULT_ACTIVE_JOB_TTL_MS,
+    );
+    const staleBefore = new Date(Date.now() - ttlMs);
+    const expiredCount =
+      await this.aiGeneratorRepository.markStaleActiveJobsFailed(
+        userId,
+        staleBefore,
+        'AI generation job expired before completion. Please try again.',
+      );
+
+    if (expiredCount > 0) {
+      this.logger.warn(
+        `Expired ${expiredCount} stale AI generation job(s) for user ${userId}`,
+      );
+    }
   }
 
   private async extractAcademicPdfText(fileBuffer: Buffer): Promise<string> {

@@ -129,4 +129,27 @@ export class AiGeneratorRepository {
       })
       .exec();
   }
+
+  async markStaleActiveJobsFailed(
+    userId: string,
+    staleBefore: Date,
+    errorMessage: string,
+  ): Promise<number> {
+    const result = await this.aiGenerationJobModel
+      .updateMany(
+        {
+          userId: new Types.ObjectId(userId),
+          status: { $in: ['queued', 'running'] },
+          updatedAt: { $lt: staleBefore },
+        },
+        {
+          status: 'failed',
+          errorMessage,
+          finishedAt: new Date(),
+        },
+      )
+      .exec();
+
+    return result.modifiedCount;
+  }
 }

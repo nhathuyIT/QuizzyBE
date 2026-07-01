@@ -12,6 +12,7 @@ import { StudyModule } from './modules/study/study.module';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { AcademicModule } from './modules/academic/academic.module';
 import { ChatbotModule } from './modules/chatbot/chatbot.module';
 
 @Module({
@@ -25,6 +26,7 @@ import { ChatbotModule } from './modules/chatbot/chatbot.module';
     CardProgressModule,
     AuthModule,
     AdminModule,
+    AcademicModule,
     ChatbotModule,
   ],
   controllers: [AppController],

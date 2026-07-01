@@ -409,9 +409,10 @@ export class ChatbotService {
   }
 
   private async getAiHistory(conversationId: string): Promise<AiChatMessage[]> {
-    const historyLimit =
-      this.configService.get<number>('CHATBOT_MAX_HISTORY') ??
-      DEFAULT_CHAT_HISTORY_LIMIT;
+    const historyLimit = this.getPositiveIntConfig(
+      'CHATBOT_MAX_HISTORY',
+      DEFAULT_CHAT_HISTORY_LIMIT,
+    );
     const messages = await this.chatbotRepository.findRecentMessages(
       conversationId,
       historyLimit,
@@ -438,9 +439,10 @@ export class ChatbotService {
     }
 
     await this.deckService.validateDeckOwner(deckId, userId);
-    const contextLimit =
-      this.configService.get<number>('CHATBOT_MAX_CARD_CONTEXT') ??
-      DEFAULT_CARD_CONTEXT_LIMIT;
+    const contextLimit = this.getPositiveIntConfig(
+      'CHATBOT_MAX_CARD_CONTEXT',
+      DEFAULT_CARD_CONTEXT_LIMIT,
+    );
     const cards = await this.cardRepository.findByDeckId(deckId);
     const deckContext = this.formatCardsForPrompt(cards.slice(0, contextLimit));
 
@@ -451,23 +453,18 @@ export class ChatbotService {
 
   private formatCardsForPrompt(cards: CardDocument[]): string {
     return cards
-      .map((card, index) => {
-        const parts = [
-          `${index + 1}. Front: ${card.front}`,
-          `Back: ${card.back}`,
-        ];
-
-        if (card.hint) {
-          parts.push(`Hint: ${card.hint}`);
-        }
-
-        if (card.explanation) {
-          parts.push(`Explanation: ${card.explanation}`);
-        }
-
-        return parts.join(' | ');
-      })
+      .map((card, index) => `${index + 1}. ${card.front} -> ${card.back}`)
       .join('\n');
+  }
+
+  private getPositiveIntConfig(key: string, fallback: number): number {
+    const value = Number(this.configService.get<string | number>(key));
+
+    if (!Number.isInteger(value) || value < 1) {
+      return fallback;
+    }
+
+    return value;
   }
 
   private async safeAiChat(

@@ -115,6 +115,31 @@
       "key": "generatedDeckId",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "academicDepartmentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "academicSubjectId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "academicDocumentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "academicFileUrl",
+      "value": "https://firebasestorage.googleapis.com/v0/b/quizzy-demo/o/documents%2FAI%2F1%2FPRF192%2Fsample-oop.pdf?alt=media",
+      "type": "string"
+    },
+    {
+      "key": "academicStoragePath",
+      "value": "documents/AI/1/PRF192/sample-oop.pdf",
+      "type": "string"
     }
   ],
   "item": [
@@ -2853,6 +2878,335 @@
               ]
             },
             "description": "Soft deletes the selected conversation."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Academic Documents",
+      "description": "Academic document APIs. Run npm run seed:academic first to create departments and subjects. POST document stores Firebase metadata only; upload the actual file from FE to Firebase Storage.",
+      "item": [
+        {
+          "name": "Academic - List Departments",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "const departments = json?.data || [];",
+                  "const department = departments.find((item) => item.code === 'AI') || departments[0];",
+                  "if (department?._id) pm.collectionVariables.set('academicDepartmentId', department._id);",
+                  "",
+                  "pm.test('academicDepartmentId is saved', function () {",
+                  "  pm.expect(pm.collectionVariables.get('academicDepartmentId')).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/academic/departments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "academic",
+                "departments"
+              ]
+            },
+            "description": "Lists active departments and saves academicDepartmentId."
+          },
+          "response": []
+        },
+        {
+          "name": "Academic - List Subjects By Department",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "const subjects = json?.data || [];",
+                  "const subject = subjects.find((item) => item.code === 'PRF192') || subjects[0];",
+                  "if (subject?._id) pm.collectionVariables.set('academicSubjectId', subject._id);",
+                  "",
+                  "pm.test('academicSubjectId is saved', function () {",
+                  "  pm.expect(pm.collectionVariables.get('academicSubjectId')).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/academic/departments/{{academicDepartmentId}}/subjects?semester=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "academic",
+                "departments",
+                "{{academicDepartmentId}}",
+                "subjects"
+              ],
+              "query": [
+                {
+                  "key": "semester",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Lists subjects in one department and saves academicSubjectId."
+          },
+          "response": []
+        },
+        {
+          "name": "Academic - List Subject Documents",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/academic/subjects/{{academicSubjectId}}/documents?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "academic",
+                "subjects",
+                "{{academicSubjectId}}",
+                "documents"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Lists active documents for the selected subject."
+          },
+          "response": []
+        },
+        {
+          "name": "Academic - Create Document Metadata",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201 or 200', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "const documentId = json?.data?._id;",
+                  "if (documentId) pm.collectionVariables.set('academicDocumentId', documentId);",
+                  "",
+                  "pm.test('academicDocumentId is saved', function () {",
+                  "  pm.expect(pm.collectionVariables.get('academicDocumentId')).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Slide OOP Basics\",\n  \"description\": \"Sample Firebase metadata for academic document testing.\",\n  \"subjectId\": \"{{academicSubjectId}}\",\n  \"fileUrl\": \"{{academicFileUrl}}\",\n  \"fileName\": \"sample-oop.pdf\",\n  \"fileType\": \"pdf\",\n  \"fileSize\": 204800,\n  \"storagePath\": \"{{academicStoragePath}}\",\n  \"tags\": [\n    \"slide\",\n    \"oop\",\n    \"chapter-1\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/academic/documents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "academic",
+                "documents"
+              ]
+            },
+            "description": "Creates document metadata after the FE uploads the file to Firebase Storage."
+          },
+          "response": []
+        },
+        {
+          "name": "Academic - My Documents",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/academic/documents/my?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "academic",
+                "documents",
+                "my"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Lists documents uploaded by the current user."
+          },
+          "response": []
+        },
+        {
+          "name": "Academic - Increment Download Count",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/academic/documents/{{academicDocumentId}}/download-count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "academic",
+                "documents",
+                "{{academicDocumentId}}",
+                "download-count"
+              ]
+            },
+            "description": "Increments downloadCount when a user downloads the document."
+          },
+          "response": []
+        },
+        {
+          "name": "Academic - Delete Document",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/academic/documents/{{academicDocumentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "academic",
+                "documents",
+                "{{academicDocumentId}}"
+              ]
+            },
+            "description": "Soft deletes a document. The owner or an admin can delete it."
           },
           "response": []
         }

@@ -3,7 +3,10 @@ import { Document, Schema as MongooseSchema, Types } from 'mongoose';
 
 export type ChatConversationDocument = ChatConversation & Document;
 
-export type ChatConversationType = 'general' | 'deck_chat';
+export type ChatConversationType =
+  | 'general'
+  | 'deck_chat'
+  | 'academic_document_chat';
 
 @Schema({ collection: 'chat_conversations', timestamps: true })
 export class ChatConversation {
@@ -25,7 +28,17 @@ export class ChatConversation {
   })
   deckId?: Types.ObjectId;
 
-  @Prop({ default: 'general', enum: ['general', 'deck_chat'] })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'AcademicDocument',
+    index: true,
+  })
+  academicDocumentId?: Types.ObjectId;
+
+  @Prop({
+    default: 'general',
+    enum: ['general', 'deck_chat', 'academic_document_chat'],
+  })
   type!: ChatConversationType;
 
   @Prop({ default: false, index: true })

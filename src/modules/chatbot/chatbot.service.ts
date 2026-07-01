@@ -27,6 +27,7 @@ import {
 } from './constants/chatbot.constants';
 import {
   BASE_CHAT_SYSTEM_PROMPT,
+  buildAcademicDocumentContextPrompt,
   buildDeckContextPrompt,
 } from './constants/prompts';
 import { ChatbotRepository } from './chatbot.repository';
@@ -87,10 +88,22 @@ export class ChatbotService {
     createConversationDto: CreateConversationDto,
     userId: string,
   ) {
+    if (createConversationDto.deckId && createConversationDto.academicDocumentId) {
+      throw new BadRequestException(
+        'Choose either deckId or academicDocumentId for a conversation',
+      );
+    }
+
     if (createConversationDto.deckId) {
       await this.deckService.validateDeckOwner(
         createConversationDto.deckId,
         userId,
+      );
+    }
+
+    if (createConversationDto.academicDocumentId) {
+      await this.getAcademicDocumentForChat(
+        createConversationDto.academicDocumentId,
       );
     }
 
@@ -574,6 +587,16 @@ export class ChatbotService {
     userId: string,
   ): Promise<string> {
     const deckId = conversation.deckId?.toString();
+    const academicDocumentId = conversation.academicDocumentId?.toString();
+
+    if (academicDocumentId) {
+      const documentContext =
+        await this.buildAcademicDocumentPromptContext(academicDocumentId);
+
+      return [BASE_CHAT_SYSTEM_PROMPT, documentContext]
+        .filter(Boolean)
+        .join('\n\n');
+    }
 
     if (!deckId) {
       return BASE_CHAT_SYSTEM_PROMPT;
@@ -596,6 +619,49 @@ export class ChatbotService {
     return cards
       .map((card, index) => `${index + 1}. ${card.front} -> ${card.back}`)
       .join('\n');
+  }
+
+  private async buildAcademicDocumentPromptContext(
+    academicDocumentId: string,
+  ): Promise<string> {
+    const { document, subject } =
+      await this.getAcademicDocumentForChat(academicDocumentId);
+    const fileBuffer = await this.academicDocumentStorageService.download(
+      document.storagePath,
+      document.fileUrl,
+    );
+    const maxContextChars = this.getPositiveIntConfig(
+      'CHATBOT_MAX_DOCUMENT_CONTEXT_CHARS',
+      DEFAULT_MAX_INPUT_CHARS,
+    );
+    const content = (await this.extractAcademicPdfText(fileBuffer)).slice(
+      0,
+      maxContextChars,
+    );
+
+    return buildAcademicDocumentContextPrompt({
+      documentTitle: document.title,
+      subjectCode: subject.code,
+      content,
+    });
+  }
+
+  private async getAcademicDocumentForChat(academicDocumentId: string) {
+    const result = await this.documentService.findActiveDocumentForGeneration(
+      academicDocumentId,
+    );
+
+    if (result.document.fileType !== 'pdf') {
+      throw new BadRequestException(
+        'Only PDF academic documents are supported right now',
+      );
+    }
+
+    if (result.document.fileSize > MAX_ACADEMIC_DOCUMENT_FILE_SIZE) {
+      throw new BadRequestException('Academic document file is too large');
+    }
+
+    return result;
   }
 
   private getPositiveIntConfig(key: string, fallback: number): number {
@@ -714,6 +780,7 @@ export class ChatbotService {
       _id: conversation._id.toString(),
       userId: conversation.userId.toString(),
       deckId: conversation.deckId?.toString(),
+      academicDocumentId: conversation.academicDocumentId?.toString(),
     };
   }
 

@@ -42,6 +42,11 @@ export class ChatbotRepository {
   ): Promise<ChatConversationDocument> {
     const title =
       createConversationDto.title?.trim() || DEFAULT_CONVERSATION_TITLE;
+    const type = createConversationDto.deckId
+      ? 'deck_chat'
+      : createConversationDto.academicDocumentId
+        ? 'academic_document_chat'
+        : 'general';
 
     return this.conversationModel.create({
       userId: new Types.ObjectId(userId),
@@ -49,7 +54,10 @@ export class ChatbotRepository {
       deckId: createConversationDto.deckId
         ? new Types.ObjectId(createConversationDto.deckId)
         : undefined,
-      type: createConversationDto.deckId ? 'deck_chat' : 'general',
+      academicDocumentId: createConversationDto.academicDocumentId
+        ? new Types.ObjectId(createConversationDto.academicDocumentId)
+        : undefined,
+      type,
       lastMessageAt: new Date(),
     });
   }

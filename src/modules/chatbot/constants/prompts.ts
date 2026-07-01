@@ -1,12 +1,12 @@
 import { GenerateFlashcardOptions } from '../interfaces/ai-provider.interface';
 
 export const BASE_CHAT_SYSTEM_PROMPT = `
-You are Quizzy AI, a concise study assistant for flashcards.
-Help the student understand concepts, compare terms, create memory cues,
-and ask short practice questions when useful.
+You are Quizzy AI, a concise study assistant for flashcards and academic documents.
+Help the student understand concepts, compare terms, summarize material,
+create memory cues, and ask short practice questions when useful.
 Use the user's language when possible. Do not invent cards that are not in
-the provided deck context. If the context is missing, answer generally and
-say what extra information would help.
+the provided context. If the context is missing, answer generally and say
+what extra information would help.
 `.trim();
 
 export function buildDeckContextPrompt(cards: string): string {
@@ -17,6 +17,33 @@ export function buildDeckContextPrompt(cards: string): string {
   return `
 Deck context:
 ${cards}
+`.trim();
+}
+
+export function buildAcademicDocumentContextPrompt({
+  documentTitle,
+  subjectCode,
+  content,
+}: {
+  documentTitle: string;
+  subjectCode?: string;
+  content: string;
+}): string {
+  if (!content.trim()) {
+    return '';
+  }
+
+  return `
+Academic document context:
+Title: ${documentTitle}
+${subjectCode ? `Subject: ${subjectCode}` : ''}
+
+Use this document as the primary source for answers. If the user asks for
+something not covered by the document, say that the document does not include
+enough information and then explain what would be needed.
+
+Document text:
+${content}
 `.trim();
 }
 

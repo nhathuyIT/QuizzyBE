@@ -9,4 +9,8 @@ export class CreateConversationDto {
   @IsMongoId()
   @IsOptional()
   deckId?: string;
+
+  @IsMongoId()
+  @IsOptional()
+  academicDocumentId?: string;
 }

@@ -32,6 +32,16 @@ export class AiGenerationJob {
   })
   sourceId!: Types.ObjectId;
 
+  @Prop({ enum: ['text', 'pdf', 'academic_document'] })
+  sourceType?: string;
+
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'AcademicDocument',
+    index: true,
+  })
+  academicDocumentId?: Types.ObjectId;
+
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Deck' })
   targetDeckId?: Types.ObjectId;
 

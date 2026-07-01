@@ -1,6 +1,7 @@
 import {
   IsEnum,
   IsInt,
+  IsMongoId,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -8,12 +9,19 @@ import {
   Min,
 } from 'class-validator';
 
+export type CreateAiSourceType =
+  | 'text'
+  | 'pdf'
+  | 'url'
+  | 'image'
+  | 'academic_document';
+
 export class CreateAiSourceAndJobDto {
-  @IsEnum(['text', 'pdf', 'url', 'image'], {
+  @IsEnum(['text', 'pdf', 'url', 'image', 'academic_document'], {
     message: 'Loại nguồn học liệu không hợp lệ',
   })
   @IsNotEmpty({ message: 'Loại nguồn học liệu không được để trống' })
-  type!: string;
+  type!: CreateAiSourceType;
 
   @IsString({ message: 'Tiêu đề tài liệu phải là chuỗi ký tự' })
   @IsNotEmpty({ message: 'Tiêu đề tài liệu không được để trống' })
@@ -26,6 +34,26 @@ export class CreateAiSourceAndJobDto {
   @IsString({ message: 'Đường dẫn file phải là chuỗi ký tự' })
   @IsOptional()
   fileUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  storagePath?: string;
+
+  @IsString()
+  @IsOptional()
+  fileType?: string;
+
+  @IsString()
+  @IsOptional()
+  extractedText?: string;
+
+  @IsMongoId()
+  @IsOptional()
+  academicDocumentId?: string;
+
+  @IsMongoId()
+  @IsOptional()
+  subjectId?: string;
 
   @IsInt({ message: 'Số lượng thẻ phải là số nguyên' })
   @Min(5, { message: 'Số lượng thẻ tối thiểu là 5' })

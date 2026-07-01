@@ -25,6 +25,15 @@ export class Deck {
   @Prop({ required: true, default: 'manual', enum: ['manual', 'ai'] })
   sourceType!: string;
 
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'AiSource' })
+  aiSourceId?: Types.ObjectId;
+
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'AcademicDocument' })
+  academicDocumentId?: Types.ObjectId;
+
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Subject' })
+  subjectId?: Types.ObjectId;
+
   @Prop({ type: [String], default: [], index: true })
   tags!: string[];
 

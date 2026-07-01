@@ -11,6 +11,7 @@ import {
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bullmq';
+import { DocumentService } from '../academic/services/document.service';
 import { AiGeneratorRepository } from '../ai-generator/ai-generator.repository';
 import { AiGeneratorService } from '../ai-generator/ai-generator.service';
 import { CardRepository } from '../card/card.repository';
@@ -30,6 +31,7 @@ import {
 } from './constants/prompts';
 import { ChatbotRepository } from './chatbot.repository';
 import { CreateConversationDto } from './dto/create-conversation.dto';
+import { GenerateFlashcardsAcademicDocumentDto } from './dto/generate-flashcards-academic-document.dto';
 import { GenerateFlashcardsPdfDto } from './dto/generate-flashcards-pdf.dto';
 import { GenerateFlashcardsTextDto } from './dto/generate-flashcards-text.dto';
 import { QueryConversationsDto } from './dto/query-conversations.dto';
@@ -42,10 +44,16 @@ import type {
   FlashcardDifficulty,
   IAiProvider,
 } from './interfaces/ai-provider.interface';
-import { FlashcardGenerateJobData } from './interfaces/flashcard-generate-job-data.interface';
+import {
+  FlashcardGenerateJobData,
+  FlashcardGenerateSourceType,
+} from './interfaces/flashcard-generate-job-data.interface';
 import { ChatConversationDocument } from './schemas/chat-conversation.schema';
 import { ChatMessageDocument } from './schemas/chat-message.schema';
+import { AcademicDocumentStorageService } from './services/academic-document-storage.service';
 import { PdfParserService } from './services/pdf-parser.service';
+
+const MAX_ACADEMIC_DOCUMENT_FILE_SIZE = 10 * 1024 * 1024;
 
 export interface UploadedPdfFile {
   buffer: Buffer;
@@ -65,6 +73,8 @@ export class ChatbotService {
     private readonly aiGeneratorService: AiGeneratorService,
     private readonly aiGeneratorRepository: AiGeneratorRepository,
     private readonly pdfParserService: PdfParserService,
+    private readonly documentService: DocumentService,
+    private readonly academicDocumentStorageService: AcademicDocumentStorageService,
     private readonly configService: ConfigService,
     @InjectQueue(FLASHCARD_GENERATE_QUEUE)
     private readonly generateQueue: Queue<FlashcardGenerateJobData>,
@@ -281,6 +291,60 @@ export class ChatbotService {
     );
   }
 
+  async generateFlashcardsFromAcademicDocument(
+    generateDto: GenerateFlashcardsAcademicDocumentDto,
+    userId: string,
+  ) {
+    const { document, subject } =
+      await this.documentService.findActiveDocumentForGeneration(
+        generateDto.documentId,
+      );
+
+    if (document.fileType !== 'pdf') {
+      throw new BadRequestException(
+        'Only PDF academic documents are supported right now',
+      );
+    }
+
+    if (document.fileSize > MAX_ACADEMIC_DOCUMENT_FILE_SIZE) {
+      throw new BadRequestException('Academic document file is too large');
+    }
+
+    const fileBuffer = await this.academicDocumentStorageService.download(
+      document.storagePath,
+    );
+    const content = this.truncateInput(
+      await this.extractAcademicPdfText(fileBuffer),
+    );
+    const title = generateDto.title?.trim() || document.title;
+    const sourceTitle = document.title.trim();
+
+    return this.queueFlashcardGeneration(
+      {
+        type: 'academic_document',
+        title,
+        content,
+        fileUrl: document.fileUrl,
+        storagePath: document.storagePath,
+        fileType: document.fileType,
+        academicDocumentId: document._id.toString(),
+        subjectId: document.subjectId.toString(),
+        deckDescription: `Generated from academic document: ${sourceTitle}`,
+        deckTags: [
+          'ai-generated',
+          'academic',
+          document.fileType,
+          subject.code,
+        ].filter(Boolean),
+        cardCount: generateDto.cardCount,
+        difficulty: generateDto.difficulty,
+        language: generateDto.language,
+        conversationId: generateDto.conversationId,
+      },
+      userId,
+    );
+  }
+
   async getJobStatus(jobId: string, userId: string) {
     const job = await this.aiGeneratorService.findJobById(jobId);
 
@@ -293,6 +357,8 @@ export class ChatbotService {
     return {
       _id: job._id.toString(),
       sourceId: job.sourceId.toString(),
+      sourceType: job.sourceType,
+      academicDocumentId: job.academicDocumentId?.toString(),
       targetDeckId: job.targetDeckId?.toString(),
       status: job.status,
       options: job.options,
@@ -304,10 +370,16 @@ export class ChatbotService {
 
   private async queueFlashcardGeneration(
     params: {
-      type: 'text' | 'pdf';
+      type: FlashcardGenerateSourceType;
       title: string;
       content: string;
       fileUrl?: string;
+      storagePath?: string;
+      fileType?: string;
+      academicDocumentId?: string;
+      subjectId?: string;
+      deckDescription?: string;
+      deckTags?: string[];
       cardCount?: number;
       difficulty?: FlashcardDifficulty;
       language?: string;
@@ -342,6 +414,12 @@ export class ChatbotService {
           title: params.title,
           rawText: params.content,
           fileUrl: params.fileUrl,
+          storagePath: params.storagePath,
+          fileType: params.fileType,
+          extractedText:
+            params.type === 'academic_document' ? params.content : undefined,
+          academicDocumentId: params.academicDocumentId,
+          subjectId: params.subjectId,
           cardCount: options.cardCount,
           difficulty: options.difficulty,
           language: options.language,
@@ -358,6 +436,11 @@ export class ChatbotService {
         userId,
         title: params.title,
         content: params.content,
+        sourceType: params.type,
+        academicDocumentId: params.academicDocumentId,
+        subjectId: params.subjectId,
+        deckDescription: params.deckDescription,
+        deckTags: params.deckTags,
         options,
         conversationId: params.conversationId,
       },
@@ -390,6 +473,20 @@ export class ChatbotService {
       bullJobId: bullJob.id,
       status: job.status,
     };
+  }
+
+  private async extractAcademicPdfText(fileBuffer: Buffer): Promise<string> {
+    try {
+      return await this.pdfParserService.extractText(fileBuffer);
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw new BadRequestException(
+          'Could not extract readable text from this document',
+        );
+      }
+
+      throw error;
+    }
   }
 
   private async getOwnedConversation(

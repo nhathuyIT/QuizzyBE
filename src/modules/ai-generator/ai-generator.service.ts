@@ -19,6 +19,8 @@ export class AiGeneratorService {
       userId,
       sourceId: source._id.toString(),
       prompt,
+      sourceType: createAiSourceAndJobDto.type,
+      academicDocumentId: createAiSourceAndJobDto.academicDocumentId,
       cardCount: createAiSourceAndJobDto.cardCount,
       difficulty: createAiSourceAndJobDto.difficulty,
       language: createAiSourceAndJobDto.language,

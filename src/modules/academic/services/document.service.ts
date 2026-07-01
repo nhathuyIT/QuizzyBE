@@ -16,6 +16,7 @@ import {
   AcademicDocumentDoc,
   AcademicDocumentFileType,
 } from '../schemas/academic-document.schema';
+import { SubjectDocument } from '../schemas/subject.schema';
 
 @Injectable()
 export class DocumentService {
@@ -50,6 +51,20 @@ export class DocumentService {
       documents.map((document) => this.toResponse(document)),
       meta,
     );
+  }
+
+  async findActiveDocumentForGeneration(
+    documentId: string,
+  ): Promise<{ document: AcademicDocumentDoc; subject: SubjectDocument }> {
+    const document = await this.documentRepository.findById(documentId);
+
+    if (!document || document.status !== 'active') {
+      throw new NotFoundException('Academic document not found');
+    }
+
+    const subject = await this.validateSubject(document.subjectId.toString());
+
+    return { document, subject };
   }
 
   async create(createDocumentDto: CreateDocumentDto, userId: string) {

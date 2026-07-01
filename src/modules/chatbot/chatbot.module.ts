@@ -3,6 +3,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { AcademicModule } from '../academic/academic.module';
 import { AiGeneratorModule } from '../ai-generator/ai-generator.module';
 import { DeckModule } from '../deck/deck.module';
 import { FLASHCARD_GENERATE_QUEUE } from './constants/chatbot.constants';
@@ -17,6 +18,7 @@ import {
   ChatConversationSchema,
 } from './schemas/chat-conversation.schema';
 import { ChatMessage, ChatMessageSchema } from './schemas/chat-message.schema';
+import { AcademicDocumentStorageService } from './services/academic-document-storage.service';
 import { PdfParserService } from './services/pdf-parser.service';
 
 @Module({
@@ -63,12 +65,14 @@ import { PdfParserService } from './services/pdf-parser.service';
       ],
     }),
     AiGeneratorModule,
+    AcademicModule,
     DeckModule,
   ],
   controllers: [ChatbotController],
   providers: [
     ChatbotService,
     ChatbotRepository,
+    AcademicDocumentStorageService,
     PdfParserService,
     FlashcardGenerateProcessor,
     GeminiProvider,

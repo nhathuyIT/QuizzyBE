@@ -18,6 +18,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { ParseMongoIdPipe } from '../../common/pipes/parse-mongo-id.pipe';
 import { ChatbotService, UploadedPdfFile } from './chatbot.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
+import { GenerateFlashcardsAcademicDocumentDto } from './dto/generate-flashcards-academic-document.dto';
 import { GenerateFlashcardsPdfDto } from './dto/generate-flashcards-pdf.dto';
 import { GenerateFlashcardsTextDto } from './dto/generate-flashcards-text.dto';
 import { QueryConversationsDto } from './dto/query-conversations.dto';
@@ -132,6 +133,20 @@ export class ChatbotController {
     return this.chatbotService.generateFlashcardsFromPdf(
       generateDto,
       file,
+      user.id,
+    );
+  }
+
+  @Post('generate/academic-document')
+  @UseGuards(ThrottlerGuard)
+  @SkipThrottle({ chat: true })
+  @Throttle({ generate: { ttl: 3600000, limit: 5 } })
+  generateFromAcademicDocument(
+    @Body() generateDto: GenerateFlashcardsAcademicDocumentDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.chatbotService.generateFlashcardsFromAcademicDocument(
+      generateDto,
       user.id,
     );
   }

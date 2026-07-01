@@ -26,6 +26,15 @@ export class AiGeneratorRepository {
       title: createAiSourceAndJobDto.title,
       rawText: createAiSourceAndJobDto.rawText,
       fileUrl: createAiSourceAndJobDto.fileUrl,
+      storagePath: createAiSourceAndJobDto.storagePath,
+      fileType: createAiSourceAndJobDto.fileType,
+      extractedText: createAiSourceAndJobDto.extractedText,
+      academicDocumentId: createAiSourceAndJobDto.academicDocumentId
+        ? new Types.ObjectId(createAiSourceAndJobDto.academicDocumentId)
+        : undefined,
+      subjectId: createAiSourceAndJobDto.subjectId
+        ? new Types.ObjectId(createAiSourceAndJobDto.subjectId)
+        : undefined,
       userId: new Types.ObjectId(userId),
     });
   }
@@ -35,6 +44,8 @@ export class AiGeneratorRepository {
     sourceId: string;
     prompt: string;
     targetDeckId?: string;
+    sourceType?: string;
+    academicDocumentId?: string;
     cardCount?: number;
     difficulty?: string;
     language?: string;
@@ -44,6 +55,10 @@ export class AiGeneratorRepository {
       sourceId: new Types.ObjectId(params.sourceId),
       targetDeckId: params.targetDeckId
         ? new Types.ObjectId(params.targetDeckId)
+        : undefined,
+      sourceType: params.sourceType,
+      academicDocumentId: params.academicDocumentId
+        ? new Types.ObjectId(params.academicDocumentId)
         : undefined,
       prompt: params.prompt,
       options: {

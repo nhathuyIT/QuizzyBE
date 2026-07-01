@@ -15,73 +15,237 @@ const departments = [
   { code: 'SE', name: 'Software Engineering' },
 ];
 
-const subjects = [
+interface SubjectSeed {
+  code: string;
+  name: string;
+  department: string;
+  semester: number;
+}
+
+const commonSubjects = [
   {
     code: 'PRF192',
-    name: 'Programming Fundamentals',
-    department: 'AI',
+    name: 'Lap trinh C co ban (Programming Fundamentals)',
     semester: 1,
   },
   {
     code: 'MAE101',
-    name: 'Mathematics for Engineering',
-    department: 'AI',
+    name: 'Toan cho ky thuat (Mathematics for Engineering)',
     semester: 1,
   },
+  { code: 'SSL101', name: 'Ky nang hoc tap dai hoc', semester: 1 },
+  { code: 'VOV', name: 'Vovinam 1', semester: 1 },
   {
-    code: 'CEA201',
-    name: 'Computer Organization and Architecture',
-    department: 'AI',
+    code: 'PRO192',
+    name: 'Lap trinh huong doi tuong Java (Object-Oriented Programming)',
     semester: 2,
   },
   {
     code: 'MAD101',
-    name: 'Discrete Mathematics',
-    department: 'AI',
+    name: 'Toan roi rac (Discrete Mathematics)',
     semester: 2,
   },
   {
-    code: 'PRO192',
-    name: 'Object-Oriented Programming',
-    department: 'AI',
+    code: 'OSG202',
+    name: 'He dieu hanh (Operating Systems)',
+    semester: 2,
+  },
+  {
+    code: 'SSG104',
+    name: 'Ky nang giao tiep va lam viec nhom',
+    semester: 2,
+  },
+  {
+    code: 'CSD201',
+    name: 'Cau truc du lieu va giai thuat',
     semester: 3,
   },
   {
-    code: 'AIE301M',
-    name: 'Artificial Intelligence',
-    department: 'AI',
-    semester: 5,
+    code: 'DBI202',
+    name: 'Co so du lieu (Database Systems)',
+    semester: 3,
   },
   {
-    code: 'AIM301M',
-    name: 'Applied Machine Learning',
-    department: 'AI',
-    semester: 6,
+    code: 'NWC203',
+    name: 'Mang may tinh (Networking)',
+    semester: 3,
   },
   {
-    code: 'PRF192',
-    name: 'Programming Fundamentals',
-    department: 'SE',
-    semester: 1,
+    code: 'JPD_CHN1',
+    name: 'Tieng Nhat hoac Tieng Trung 1',
+    semester: 3,
   },
   {
-    code: 'MAE101',
-    name: 'Mathematics for Engineering',
-    department: 'SE',
-    semester: 1,
+    code: 'MAS291',
+    name: 'Xac suat thong ke (Probability and Statistics)',
+    semester: 4,
   },
+  {
+    code: 'PRJ301',
+    name: 'Lap trinh Web voi Java (Java Web)',
+    semester: 4,
+  },
+  {
+    code: 'SWE202',
+    name: 'Nhap mon Ky thuat phan mem',
+    semester: 4,
+  },
+  {
+    code: 'IOT102',
+    name: 'Internet of Things',
+    semester: 4,
+  },
+];
+
+const seSpecializedSubjects = [
   {
     code: 'SWP391',
-    name: 'Application Development Project',
-    department: 'SE',
+    name: 'Do an du an phan mem (Software Project)',
     semester: 5,
+  },
+  {
+    code: 'SWT301',
+    name: 'Kiem thu phan mem (Software Testing)',
+    semester: 5,
+  },
+  {
+    code: 'SWR302',
+    name: 'Yeu cau phan mem (Software Requirements)',
+    semester: 5,
+  },
+  {
+    code: 'JPD_CHN2',
+    name: 'Tieng Nhat hoac Tieng Trung 2',
+    semester: 5,
+  },
+  {
+    code: 'OJT',
+    name: 'Thuc tap doanh nghiep (On-the-Job Training)',
+    semester: 6,
   },
   {
     code: 'SWD392',
-    name: 'SW Architecture and Design',
-    department: 'SE',
+    name: 'Kien truc va thiet ke phan mem',
+    semester: 7,
+  },
+  {
+    code: 'PRM392',
+    name: 'Lap trinh di dong (Mobile Programming)',
+    semester: 7,
+  },
+  {
+    code: 'ITE302C',
+    name: 'Dao duc trong CNTT',
+    semester: 7,
+  },
+  {
+    code: 'SPM',
+    name: 'Quan ly du an phan mem (Software Project Management)',
+    semester: 8,
+  },
+  {
+    code: 'WRP',
+    name: 'Viet bao cao ky thuat',
+    semester: 8,
+  },
+  {
+    code: 'SE_ELECTIVE',
+    name: 'Mon tu chon chuyen nganh SE',
+    semester: 8,
+  },
+  {
+    code: 'SEP490',
+    name: 'Do an tot nghiep SE (Capstone Project)',
+    semester: 9,
+  },
+  {
+    code: 'MLN',
+    name: 'Cac mon ly luan chinh tri',
+    semester: 9,
+  },
+];
+
+const aiSpecializedSubjects = [
+  {
+    code: 'AIL302M',
+    name: 'Hoc may (Machine Learning)',
+    semester: 5,
+  },
+  {
+    code: 'DAP391_PYP',
+    name: 'Lap trinh Python cho Khoa hoc du lieu',
+    semester: 5,
+  },
+  {
+    code: 'AIP391',
+    name: 'Do an du an AI co ban',
+    semester: 5,
+  },
+  {
+    code: 'JPD_CHN2',
+    name: 'Tieng Nhat hoac Tieng Trung 2',
+    semester: 5,
+  },
+  {
+    code: 'OJT',
+    name: 'Thuc tap doanh nghiep AI/Data',
     semester: 6,
   },
+  {
+    code: 'AIL401C',
+    name: 'Hoc sau (Deep Learning)',
+    semester: 7,
+  },
+  {
+    code: 'AIL402C',
+    name: 'Xu ly ngon ngu tu nhien (Natural Language Processing)',
+    semester: 7,
+  },
+  {
+    code: 'DBS',
+    name: 'He quan tri CSDL nang cao',
+    semester: 7,
+  },
+  {
+    code: 'AIL403C',
+    name: 'Thi giac may tinh (Computer Vision)',
+    semester: 8,
+  },
+  {
+    code: 'AIP',
+    name: 'AI in Production',
+    semester: 8,
+  },
+  {
+    code: 'AI_ELECTIVE',
+    name: 'Mon tu chon chuyen nganh AI',
+    semester: 8,
+  },
+  {
+    code: 'AIP490_GRA',
+    name: 'Do an tot nghiep AI',
+    semester: 9,
+  },
+  {
+    code: 'MLN',
+    name: 'Cac mon ly luan chinh tri',
+    semester: 9,
+  },
+];
+
+const subjects: SubjectSeed[] = [
+  ...commonSubjects.flatMap((subject) => [
+    { ...subject, department: 'AI' },
+    { ...subject, department: 'SE' },
+  ]),
+  ...aiSpecializedSubjects.map((subject) => ({
+    ...subject,
+    department: 'AI',
+  })),
+  ...seSpecializedSubjects.map((subject) => ({
+    ...subject,
+    department: 'SE',
+  })),
 ];
 
 async function ensureIndexes(client: MongoClient) {

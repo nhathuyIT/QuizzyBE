@@ -16,31 +16,53 @@ export class AcademicDocumentStorageService {
 
   constructor(private readonly configService: ConfigService) {}
 
-  async download(storagePath: string): Promise<Buffer> {
+  async download(storagePath: string, fileUrl?: string): Promise<Buffer> {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL')?.trim();
-    const serviceRoleKey = this.configService
-      .get<string>('SUPABASE_SERVICE_ROLE_KEY')
-      ?.trim();
+    const serviceRoleKey =
+      this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY')?.trim() ||
+      this.configService.get<string>('SUPABASE_SECRET_KEY')?.trim() ||
+      '';
     const bucket =
       this.configService.get<string>('SUPABASE_ACADEMIC_BUCKET')?.trim() ||
       DEFAULT_ACADEMIC_BUCKET;
 
-    if (!supabaseUrl || !serviceRoleKey) {
+    if (supabaseUrl && serviceRoleKey) {
+      const objectUrl = this.buildObjectUrl(supabaseUrl, bucket, storagePath);
+
+      return this.downloadUrl(objectUrl, storagePath, {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+      });
+    }
+
+    if (fileUrl) {
+      this.logger.warn(
+        'SUPABASE_URL and server secret key are missing; falling back to stored public fileUrl',
+      );
+
+      return this.downloadUrl(fileUrl, storagePath);
+    }
+
+    throw new InternalServerErrorException(
+      'Academic document storage is not configured',
+    );
+  }
+
+  private async downloadUrl(
+    url: string,
+    storagePath: string,
+    headers?: Record<string, string>,
+  ): Promise<Buffer> {
+    if (!this.isHttpUrl(url)) {
       throw new InternalServerErrorException(
-        'Academic document storage is not configured',
+        'Academic document storage URL is not configured correctly',
       );
     }
 
-    const objectUrl = this.buildObjectUrl(supabaseUrl, bucket, storagePath);
     let response: Response;
 
     try {
-      response = await fetch(objectUrl, {
-        headers: {
-          apikey: serviceRoleKey,
-          Authorization: `Bearer ${serviceRoleKey}`,
-        },
-      });
+      response = await fetch(url, { headers });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Unknown storage error';
@@ -73,6 +95,16 @@ export class AcademicDocumentStorageService {
     }
 
     return Buffer.from(arrayBuffer);
+  }
+
+  private isHttpUrl(url: string) {
+    try {
+      const parsedUrl = new URL(url);
+
+      return parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:';
+    } catch {
+      return false;
+    }
   }
 
   private buildObjectUrl(

@@ -312,6 +312,7 @@ export class ChatbotService {
 
     const fileBuffer = await this.academicDocumentStorageService.download(
       document.storagePath,
+      document.fileUrl,
     );
     const content = this.truncateInput(
       await this.extractAcademicPdfText(fileBuffer),

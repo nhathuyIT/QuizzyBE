@@ -12,6 +12,7 @@ import {
 import {
   AiChatMessage,
   AiChatResponse,
+  AiPdfDocument,
   GeneratedFlashcard,
   GenerateFlashcardOptions,
   GenerateFlashcardsResult,
@@ -71,6 +72,50 @@ export class GeminiProvider implements IAiProvider {
     };
   }
 
+  async chatWithPdf(
+    systemPrompt: string,
+    history: AiChatMessage[],
+    userMessage: string,
+    document: AiPdfDocument,
+  ): Promise<AiChatResponse> {
+    const model = this.getModel();
+    const result = await model.generateContent({
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              text: [
+                systemPrompt,
+                this.formatHistoryForPrompt(history),
+                `User message:\n${userMessage}`,
+              ]
+                .filter(Boolean)
+                .join('\n\n'),
+            },
+            {
+              inlineData: {
+                mimeType: document.mimeType,
+                data: document.data.toString('base64'),
+              },
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.35,
+        maxOutputTokens: 1200,
+      },
+    });
+    const response = result.response;
+
+    return {
+      content: response.text(),
+      inputTokens: response.usageMetadata?.promptTokenCount,
+      outputTokens: response.usageMetadata?.candidatesTokenCount,
+    };
+  }
+
   async generateFlashcards(
     content: string,
     options: GenerateFlashcardOptions,
@@ -119,6 +164,21 @@ export class GeminiProvider implements IAiProvider {
     }
 
     return this.model;
+  }
+
+  private formatHistoryForPrompt(history: AiChatMessage[]): string {
+    if (!history.length) {
+      return '';
+    }
+
+    return [
+      'Conversation so far:',
+      ...history.map((message) => {
+        const speaker = message.role === 'model' ? 'Assistant' : 'User';
+
+        return `${speaker}: ${message.content}`;
+      }),
+    ].join('\n');
   }
 
   private parseFlashcardsResponse(rawText: string): GeneratedFlashcard[] {

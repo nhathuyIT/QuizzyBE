@@ -47,6 +47,26 @@ ${content}
 `.trim();
 }
 
+export function buildAcademicDocumentAttachmentPrompt({
+  documentTitle,
+  subjectCode,
+}: {
+  documentTitle: string;
+  subjectCode?: string;
+}): string {
+  return `
+Academic document context:
+Title: ${documentTitle}
+${subjectCode ? `Subject: ${subjectCode}` : ''}
+
+The PDF is attached to this request. Read the attached PDF and use it as the
+primary source for answers. If the user asks for something not covered by the
+PDF, say that the document does not include enough information and then explain
+what would be needed. If earlier assistant messages claimed the document was
+empty or unavailable, ignore that claim and inspect the attached PDF again.
+`.trim();
+}
+
 export function buildFlashcardGenerationPrompt(
   content: string,
   options: GenerateFlashcardOptions,

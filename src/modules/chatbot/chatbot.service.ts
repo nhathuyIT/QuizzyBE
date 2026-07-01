@@ -27,6 +27,7 @@ import {
 } from './constants/chatbot.constants';
 import {
   BASE_CHAT_SYSTEM_PROMPT,
+  buildAcademicDocumentAttachmentPrompt,
   buildAcademicDocumentContextPrompt,
   buildDeckContextPrompt,
 } from './constants/prompts';
@@ -225,8 +226,13 @@ export class ChatbotService {
       content,
     });
 
-    const systemPrompt = await this.buildSystemPrompt(conversation, userId);
-    const aiResponse = await this.safeAiChat(systemPrompt, history, content);
+    const aiResponse = conversation.academicDocumentId
+      ? await this.safeAiPdfChat(conversation, history, content)
+      : await this.safeAiChat(
+          await this.buildSystemPrompt(conversation, userId),
+          history,
+          content,
+        );
     const assistantMessage = await this.chatbotRepository.createMessage({
       conversationId,
       userId,
@@ -672,6 +678,61 @@ export class ChatbotService {
     }
 
     return value;
+  }
+
+  private async safeAiPdfChat(
+    conversation: ChatConversationDocument,
+    history: AiChatMessage[],
+    message: string,
+  ) {
+    try {
+      const academicDocumentId = conversation.academicDocumentId?.toString();
+
+      if (!academicDocumentId) {
+        throw new BadRequestException('Academic document context is missing');
+      }
+
+      const { document, subject } =
+        await this.getAcademicDocumentForChat(academicDocumentId);
+      const fileBuffer = await this.academicDocumentStorageService.download(
+        document.storagePath,
+        document.fileUrl,
+      );
+      const systemPrompt = [
+        BASE_CHAT_SYSTEM_PROMPT,
+        buildAcademicDocumentAttachmentPrompt({
+          documentTitle: document.title,
+          subjectCode: subject.code,
+        }),
+      ].join('\n\n');
+
+      return await this.aiProvider.chatWithPdf(systemPrompt, history, message, {
+        data: fileBuffer,
+        mimeType: 'application/pdf',
+        subjectCode: subject.code,
+        title: document.title,
+      });
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      const messageText =
+        error instanceof Error ? error.message : 'Unknown AI provider error';
+
+      if (messageText.includes('RATE_LIMIT') || messageText.includes('429')) {
+        throw new ServiceUnavailableException(
+          'AI service is busy. Please try again later',
+        );
+      }
+
+      if (messageText.includes('Gemini API is not configured')) {
+        throw new InternalServerErrorException('AI provider is not configured');
+      }
+
+      this.logger.error(messageText);
+      throw new InternalServerErrorException('Could not process PDF response');
+    }
   }
 
   private async safeAiChat(

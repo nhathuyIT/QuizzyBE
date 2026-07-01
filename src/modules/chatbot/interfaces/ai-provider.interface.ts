@@ -16,6 +16,13 @@ export interface AiChatResponse extends AiUsage {
   content: string;
 }
 
+export interface AiPdfDocument {
+  data: Buffer;
+  mimeType: 'application/pdf';
+  subjectCode?: string;
+  title: string;
+}
+
 export type FlashcardDifficulty = 'easy' | 'medium' | 'hard';
 
 export interface GenerateFlashcardOptions {
@@ -41,6 +48,13 @@ export interface IAiProvider {
     systemPrompt: string,
     history: AiChatMessage[],
     userMessage: string,
+  ): Promise<AiChatResponse>;
+
+  chatWithPdf(
+    systemPrompt: string,
+    history: AiChatMessage[],
+    userMessage: string,
+    document: AiPdfDocument,
   ): Promise<AiChatResponse>;
 
   generateFlashcards(

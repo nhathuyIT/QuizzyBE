@@ -86,7 +86,9 @@ describe('AdminController (e2e)', () => {
         .fn()
         .mockResolvedValue({ id: USER_ID, isDeleted: false }),
       findDecks: jest.fn().mockResolvedValue({ data: [], meta: pageMeta() }),
+      createDeck: jest.fn().mockResolvedValue({ id: DECK_ID }),
       findDeck: jest.fn().mockResolvedValue({ id: DECK_ID }),
+      updateDeck: jest.fn().mockResolvedValue({ id: DECK_ID }),
       moderateDeck: jest
         .fn()
         .mockResolvedValue({ id: DECK_ID, moderationStatus: 'hidden' }),
@@ -201,8 +203,24 @@ describe('AdminController (e2e)', () => {
       .expect(200);
 
     await request(server)
+      .post('/v1/admin/decks')
+      .set('Authorization', ADMIN_TOKEN)
+      .send({
+        title: 'Admin deck',
+        visibility: 'public',
+        ownerId: USER_ID,
+      })
+      .expect(201);
+
+    await request(server)
       .get(`/v1/admin/decks/${DECK_ID}`)
       .set('Authorization', ADMIN_TOKEN)
+      .expect(200);
+
+    await request(server)
+      .patch(`/v1/admin/decks/${DECK_ID}`)
+      .set('Authorization', ADMIN_TOKEN)
+      .send({ title: 'Renamed deck', tags: ['admin'] })
       .expect(200);
 
     await request(server)

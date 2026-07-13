@@ -3868,6 +3868,94 @@
               "response": []
             },
             {
+              "name": "Admin - Create Deck",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const missing = [\"adminUserId\"].filter((key) => !pm.collectionVariables.get(key));",
+                      "if (missing.length) {",
+                      "  console.warn(`Missing ${missing.join(', ')}. Set the variable manually or run the matching list request first.`);",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status is 201', function () {",
+                      "  pm.response.to.have.status(201);",
+                      "});",
+                      "",
+                      "function objectIdToString(value) {",
+                      "  if (!value) return undefined;",
+                      "  if (typeof value === 'string') return value;",
+                      "  if (value.$oid) return value.$oid;",
+                      "  if (value.buffer) {",
+                      "    return Object.keys(value.buffer)",
+                      "      .sort((a, b) => Number(a) - Number(b))",
+                      "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
+                      "      .join('');",
+                      "  }",
+                      "  return undefined;",
+                      "}",
+                      "",
+                      "function readId(record) {",
+                      "  return objectIdToString(record?._id ?? record?.id);",
+                      "}",
+                      "",
+                      "const json = pm.response.json();",
+                      "const deckId = readId(json?.data);",
+                      "if (deckId) {",
+                      "  pm.collectionVariables.set('adminDeckId', deckId);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminAccessToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Postman Admin Deck {{$timestamp}}\",\n  \"description\": \"Created from the admin deck Postman flow.\",\n  \"visibility\": \"private\",\n  \"tags\": [\"admin\", \"postman\"],\n  \"ownerId\": \"{{adminUserId}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/admin/decks",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "admin",
+                    "decks"
+                  ]
+                },
+                "description": "Creates a manual deck for adminUserId and saves adminDeckId from the response."
+              },
+              "response": []
+            },
+            {
               "name": "Admin - Get Deck Detail",
               "event": [
                 {
@@ -3923,6 +4011,71 @@
                       "key": "cardTake",
                       "value": "20"
                     }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Admin - Update Deck",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const missing = [\"adminDeckId\"].filter((key) => !pm.collectionVariables.get(key));",
+                      "if (missing.length) {",
+                      "  console.warn(`Missing ${missing.join(', ')}. Set the variable manually or run the matching list request first.`);",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminAccessToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Postman Admin Deck Updated {{$timestamp}}\",\n  \"description\": \"Updated from the admin deck Postman flow.\",\n  \"visibility\": \"public\",\n  \"tags\": [\"admin\", \"postman\", \"updated\"]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/admin/decks/{{adminDeckId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "admin",
+                    "decks",
+                    "{{adminDeckId}}"
                   ]
                 }
               },

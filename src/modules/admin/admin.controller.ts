@@ -28,7 +28,9 @@ import {
   AdminStudySessionQueryDto,
   AdminStudySummaryQueryDto,
   AdminUserQueryDto,
+  CreateAdminDeckDto,
   ModerateDeckDto,
+  UpdateAdminDeckDto,
   UpdateAdminUserRoleDto,
   UpdateAdminUserStatusDto,
 } from './dto/admin.dto';
@@ -108,12 +110,29 @@ export class AdminController {
     return this.adminService.findDecks(query);
   }
 
+  @Post('decks')
+  createDeck(
+    @Body() dto: CreateAdminDeckDto,
+    @CurrentUser('id') adminId: string,
+  ) {
+    return this.adminService.createDeck(dto, adminId);
+  }
+
   @Get('decks/:deckId')
   findDeck(
     @Param('deckId', new ParseMongoIdPipe()) deckId: string,
     @Query() query: AdminDeckDetailQueryDto,
   ) {
     return this.adminService.findDeck(deckId, query);
+  }
+
+  @Patch('decks/:deckId')
+  updateDeck(
+    @Param('deckId', new ParseMongoIdPipe()) deckId: string,
+    @Body() dto: UpdateAdminDeckDto,
+    @CurrentUser('id') adminId: string,
+  ) {
+    return this.adminService.updateDeck(deckId, dto, adminId);
   }
 
   @Patch('decks/:deckId/moderation')

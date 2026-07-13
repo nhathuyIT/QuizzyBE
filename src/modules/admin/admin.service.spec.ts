@@ -36,6 +36,20 @@ describe('AdminService', () => {
         Promise<AdminDeckRecord | null>,
         [string, Record<string, unknown>, ClientSession]
       >(),
+      createDeck: jest.fn<
+        Promise<AdminDeckRecord>,
+        [
+          {
+            title: string;
+            description?: string;
+            visibility: 'private' | 'link' | 'public';
+            tags: string[];
+            sourceType: 'manual';
+            createdBy: Types.ObjectId;
+          },
+          ClientSession,
+        ]
+      >(),
       createAuditLog: jest.fn<
         Promise<unknown>,
         [
@@ -118,6 +132,95 @@ describe('AdminService', () => {
     expect(result).toEqual(expect.objectContaining({ status: 'suspended' }));
   });
 
+  it('creates a deck for an owner and audits in one transaction', async () => {
+    repository.findUserById.mockResolvedValue({
+      _id: userId,
+      status: 'active',
+      isDeleted: false,
+    });
+    repository.createDeck.mockResolvedValue({
+      _id: new Types.ObjectId(deckId),
+      title: 'Admin deck',
+      createdBy: new Types.ObjectId(userId),
+    });
+
+    const result = await service.createDeck(
+      {
+        title: 'Admin deck',
+        visibility: 'public',
+        tags: ['math'],
+        ownerId: userId,
+      },
+      adminId,
+    );
+
+    expect(transactionMock).toHaveBeenCalledTimes(1);
+    expect(repository.createDeck).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Admin deck',
+        visibility: 'public',
+        tags: ['math'],
+        sourceType: 'manual',
+        createdBy: expect.any(Types.ObjectId) as Types.ObjectId,
+      }),
+      mongoSession,
+    );
+    expect(repository.createAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        adminId,
+        action: 'deck.created',
+        targetType: 'deck',
+        targetId: deckId,
+      }),
+      mongoSession,
+    );
+    expect(result).toEqual(expect.objectContaining({ title: 'Admin deck' }));
+  });
+
+  it('updates deck metadata and audits changed fields in one transaction', async () => {
+    repository.findDeckById.mockResolvedValue({
+      _id: deckId,
+      title: 'Old title',
+      visibility: 'private',
+    });
+    repository.updateDeck.mockResolvedValue({
+      _id: deckId,
+      title: 'New title',
+      visibility: 'public',
+    });
+
+    const result = await service.updateDeck(
+      deckId,
+      { title: 'New title', visibility: 'public' },
+      adminId,
+    );
+
+    expect(transactionMock).toHaveBeenCalledTimes(1);
+    expect(repository.updateDeck).toHaveBeenCalledWith(
+      deckId,
+      {
+        $set: {
+          title: 'New title',
+          visibility: 'public',
+        },
+      },
+      mongoSession,
+    );
+    expect(repository.createAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        adminId,
+        action: 'deck.updated',
+        targetType: 'deck',
+        targetId: deckId,
+        metadata: expect.objectContaining({
+          fields: ['title', 'visibility'],
+        }) as Record<string, unknown>,
+      }),
+      mongoSession,
+    );
+    expect(result).toEqual(expect.objectContaining({ title: 'New title' }));
+  });
+
   it('moderates a deck, clears stale reason, and audits in one transaction', async () => {
     repository.findDeckById.mockResolvedValue({
       _id: deckId,
@@ -185,6 +288,20 @@ type RepositoryMock = {
   updateDeck: jest.Mock<
     Promise<AdminDeckRecord | null>,
     [string, Record<string, unknown>, ClientSession]
+  >;
+  createDeck: jest.Mock<
+    Promise<AdminDeckRecord>,
+    [
+      {
+        title: string;
+        description?: string;
+        visibility: 'private' | 'link' | 'public';
+        tags: string[];
+        sourceType: 'manual';
+        createdBy: Types.ObjectId;
+      },
+      ClientSession,
+    ]
   >;
   createAuditLog: jest.Mock<
     Promise<unknown>,

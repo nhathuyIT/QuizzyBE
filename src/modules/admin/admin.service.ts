@@ -17,7 +17,9 @@ import {
   AdminStudySessionQueryDto,
   AdminStudySummaryQueryDto,
   AdminUserQueryDto,
+  CreateAdminDeckDto,
   ModerateDeckDto,
+  UpdateAdminDeckDto,
   UpdateAdminUserRoleDto,
   UpdateAdminUserStatusDto,
 } from './dto/admin.dto';
@@ -260,6 +262,40 @@ export class AdminService {
     return this.toPage(result, query.page, query.take);
   }
 
+  async createDeck(dto: CreateAdminDeckDto, adminId: string) {
+    const owner = await this.requireUser(dto.ownerId);
+    if (owner.isDeleted) {
+      throw new BadRequestException('Owner is deleted');
+    }
+
+    const input = {
+      title: dto.title,
+      description: dto.description,
+      visibility: dto.visibility ?? 'private',
+      tags: dto.tags ?? [],
+      sourceType: 'manual' as const,
+      createdBy: new Types.ObjectId(dto.ownerId),
+    };
+
+    return this.connection.transaction(async (session) => {
+      const created = await this.adminRepository.createDeck(input, session);
+      await this.adminRepository.createAuditLog(
+        {
+          adminId,
+          action: 'deck.created',
+          targetType: 'deck',
+          targetId: this.getRecordId(created),
+          metadata: {
+            ownerId: dto.ownerId,
+            visibility: input.visibility,
+          },
+        },
+        session,
+      );
+      return created;
+    });
+  }
+
   async findDeck(deckId: string, query: AdminDeckDetailQueryDto) {
     const deck = await this.adminRepository.findDeckById(deckId);
     if (!deck) throw new NotFoundException('Deck not found');
@@ -276,6 +312,45 @@ export class AdminService {
       metrics,
       cards: this.toPage(cards, query.cardPage, query.cardTake),
     };
+  }
+
+  async updateDeck(deckId: string, dto: UpdateAdminDeckDto, adminId: string) {
+    const current = await this.requireDeck(deckId);
+    if (dto.ownerId) {
+      const owner = await this.requireUser(dto.ownerId);
+      if (owner.isDeleted) {
+        throw new BadRequestException('Owner is deleted');
+      }
+    }
+
+    const $set = this.buildAdminDeckUpdate(dto);
+    const fields = Object.keys($set);
+    if (!fields.length) {
+      throw new BadRequestException('No deck fields to update');
+    }
+
+    return this.connection.transaction(async (session) => {
+      const updated = await this.adminRepository.updateDeck(
+        deckId,
+        { $set },
+        session,
+      );
+      await this.adminRepository.createAuditLog(
+        {
+          adminId,
+          action: 'deck.updated',
+          targetType: 'deck',
+          targetId: deckId,
+          metadata: {
+            fields,
+            from: this.pickDeckAuditFields(current, fields),
+            to: this.pickDeckAuditFields(updated ?? $set, fields),
+          },
+        },
+        session,
+      );
+      return updated;
+    });
   }
 
   async moderateDeck(deckId: string, dto: ModerateDeckDto, adminId: string) {
@@ -469,5 +544,31 @@ export class AdminService {
 
   private escapeRegex(value: string) {
     return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  private buildAdminDeckUpdate(dto: UpdateAdminDeckDto) {
+    const update: Record<string, unknown> = {};
+    if (dto.title !== undefined) update.title = dto.title;
+    if (dto.description !== undefined) update.description = dto.description;
+    if (dto.visibility !== undefined) update.visibility = dto.visibility;
+    if (dto.tags !== undefined) update.tags = dto.tags;
+    if (dto.ownerId !== undefined) {
+      update.createdBy = new Types.ObjectId(dto.ownerId);
+    }
+    return update;
+  }
+
+  private pickDeckAuditFields(deck: Record<string, unknown>, fields: string[]) {
+    return fields.reduce<Record<string, unknown>>((picked, field) => {
+      const value = deck[field];
+      picked[field] =
+        value instanceof Types.ObjectId ? value.toString() : value;
+      return picked;
+    }, {});
+  }
+
+  private getRecordId(record: Record<string, unknown>) {
+    const id = record._id ?? record.id;
+    return id instanceof Types.ObjectId ? id.toString() : String(id);
   }
 }

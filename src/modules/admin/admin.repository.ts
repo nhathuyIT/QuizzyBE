@@ -27,6 +27,14 @@ export type AdminDeckRecord = Record<string, unknown> & {
   moderationStatus?: 'active' | 'hidden';
   deletedAt?: Date;
 };
+type AdminDeckCreateInput = {
+  title: string;
+  description?: string;
+  visibility: 'private' | 'link' | 'public';
+  tags: string[];
+  sourceType: 'manual';
+  createdBy: Types.ObjectId;
+};
 type AdminResultRecord = Record<string, unknown>;
 type CountRow = { count: number };
 type DashboardReviewRow = {
@@ -429,6 +437,14 @@ export class AdminRepository {
     return rows[0] ?? null;
   }
 
+  async createDeck(
+    input: AdminDeckCreateInput,
+    session: ClientSession,
+  ): Promise<AdminDeckRecord> {
+    const [deck] = await this.deckModel.create([input], { session });
+    return deck.toObject() as unknown as AdminDeckRecord;
+  }
+
   async getDeckMetrics(deckId: string) {
     const id = new Types.ObjectId(deckId);
     const [sessionStats, reviewStats] = await Promise.all([
@@ -507,7 +523,11 @@ export class AdminRepository {
     session: ClientSession,
   ): Promise<AdminDeckRecord | null> {
     return this.deckModel
-      .findByIdAndUpdate(deckId, update, { new: true, session })
+      .findByIdAndUpdate(deckId, update, {
+        new: true,
+        runValidators: true,
+        session,
+      })
       .lean<AdminDeckRecord>()
       .exec();
   }

@@ -1,9 +1,11 @@
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsDateString,
   IsEnum,
   IsInt,
   IsMongoId,
+  IsNotEmpty,
   IsOptional,
   IsString,
   Max,
@@ -88,6 +90,58 @@ export class AdminDeckQueryDto extends AdminPageOptionsDto {
   @IsEnum(['active', 'hidden', 'deleted'])
   @IsOptional()
   moderationStatus?: 'active' | 'hidden' | 'deleted';
+
+  @IsMongoId()
+  @IsOptional()
+  ownerId?: string;
+}
+
+export class CreateAdminDeckDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  title!: string;
+
+  @IsString()
+  @MaxLength(1000)
+  @IsOptional()
+  description?: string;
+
+  @IsEnum(['private', 'link', 'public'])
+  @IsOptional()
+  visibility?: 'private' | 'link' | 'public';
+
+  @IsArray()
+  @IsString({ each: true })
+  @MaxLength(50, { each: true })
+  @IsOptional()
+  tags?: string[];
+
+  @IsMongoId()
+  ownerId!: string;
+}
+
+export class UpdateAdminDeckDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  @IsOptional()
+  title?: string;
+
+  @IsString()
+  @MaxLength(1000)
+  @IsOptional()
+  description?: string;
+
+  @IsEnum(['private', 'link', 'public'])
+  @IsOptional()
+  visibility?: 'private' | 'link' | 'public';
+
+  @IsArray()
+  @IsString({ each: true })
+  @MaxLength(50, { each: true })
+  @IsOptional()
+  tags?: string[];
 
   @IsMongoId()
   @IsOptional()

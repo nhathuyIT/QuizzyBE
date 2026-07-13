@@ -24,7 +24,9 @@ DELETE /v1/admin/users/:userId
 POST   /v1/admin/users/:userId/restore
 
 GET    /v1/admin/decks?keyword=&visibility=&moderationStatus=&ownerId=&page=&take=
+POST   /v1/admin/decks
 GET    /v1/admin/decks/:deckId?cardPage=&cardTake=
+PATCH  /v1/admin/decks/:deckId
 PATCH  /v1/admin/decks/:deckId/moderation
 DELETE /v1/admin/decks/:deckId
 POST   /v1/admin/decks/:deckId/restore

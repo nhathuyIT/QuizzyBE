@@ -29,7 +29,9 @@ import {
   AdminStudySessionQueryDto,
   AdminStudySummaryQueryDto,
   AdminUserQueryDto,
+  CreateAdminDeckDto,
   ModerateDeckDto,
+  UpdateAdminDeckDto,
   UpdateAdminUserRoleDto,
   UpdateAdminUserStatusDto,
 } from './dto/admin.dto';
@@ -272,6 +274,38 @@ export class AdminService {
     return this.toPage(result, query.page, query.take);
   }
 
+  async createDeck(dto: CreateAdminDeckDto, adminId: string) {
+    await this.requireUser(dto.ownerId);
+
+    return this.connection.transaction(async (session) => {
+      const deck = await this.adminRepository.createDeck(
+        {
+          title: dto.title.trim(),
+          description: dto.description?.trim(),
+          visibility: dto.visibility ?? 'private',
+          createdBy: new Types.ObjectId(dto.ownerId),
+          sourceType: 'manual',
+          tags: this.normalizeTags(dto.tags ?? []),
+        },
+        session,
+      );
+
+      const deckId = this.getRecordId(deck);
+      await this.adminRepository.createAuditLog(
+        {
+          adminId,
+          action: 'deck.created',
+          targetType: 'deck',
+          targetId: deckId,
+          metadata: { ownerId: dto.ownerId },
+        },
+        session,
+      );
+
+      return deck;
+    });
+  }
+
   async findDeck(deckId: string, query: AdminDeckDetailQueryDto) {
     const deck = await this.adminRepository.findDeckById(deckId);
     if (!deck) throw new NotFoundException('Deck not found');
@@ -288,6 +322,45 @@ export class AdminService {
       metrics,
       cards: this.toPage(cards, query.cardPage, query.cardTake),
     };
+  }
+
+  async updateDeck(
+    deckId: string,
+    dto: UpdateAdminDeckDto,
+    adminId: string,
+  ) {
+    const current = await this.requireDeck(deckId);
+
+    if (dto.ownerId) {
+      await this.requireUser(dto.ownerId);
+    }
+
+    const update = this.buildSetUpdate({
+      title: dto.title?.trim(),
+      description: dto.description?.trim(),
+      visibility: dto.visibility,
+      tags: dto.tags ? this.normalizeTags(dto.tags) : undefined,
+      createdBy: dto.ownerId ? new Types.ObjectId(dto.ownerId) : undefined,
+    });
+
+    return this.connection.transaction(async (session) => {
+      const updated = await this.adminRepository.updateDeck(
+        deckId,
+        update,
+        session,
+      );
+      await this.adminRepository.createAuditLog(
+        {
+          adminId,
+          action: 'deck.updated',
+          targetType: 'deck',
+          targetId: deckId,
+          metadata: { before: current, after: update.$set },
+        },
+        session,
+      );
+      return updated;
+    });
   }
 
   async moderateDeck(deckId: string, dto: ModerateDeckDto, adminId: string) {

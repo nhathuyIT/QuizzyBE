@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsDateString,
   IsEnum,
   IsInt,
@@ -107,6 +108,54 @@ export class AdminDeckDetailQueryDto {
   @Max(100)
   @IsOptional()
   cardTake = 20;
+}
+
+export class CreateAdminDeckDto {
+  @IsString()
+  @MaxLength(200)
+  title!: string;
+
+  @IsString()
+  @MaxLength(1000)
+  @IsOptional()
+  description?: string;
+
+  @IsEnum(['private', 'link', 'public'])
+  @IsOptional()
+  visibility?: 'private' | 'link' | 'public';
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  tags?: string[];
+
+  @IsMongoId()
+  ownerId!: string;
+}
+
+export class UpdateAdminDeckDto {
+  @IsString()
+  @MaxLength(200)
+  @IsOptional()
+  title?: string;
+
+  @IsString()
+  @MaxLength(1000)
+  @IsOptional()
+  description?: string;
+
+  @IsEnum(['private', 'link', 'public'])
+  @IsOptional()
+  visibility?: 'private' | 'link' | 'public';
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  tags?: string[];
+
+  @IsMongoId()
+  @IsOptional()
+  ownerId?: string;
 }
 
 export class ModerateDeckDto {

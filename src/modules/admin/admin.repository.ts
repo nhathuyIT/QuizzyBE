@@ -412,6 +412,14 @@ export class AdminRepository {
       .exec();
   }
 
+  async createDeck(
+    data: Record<string, unknown>,
+    session: ClientSession,
+  ): Promise<AdminDeckRecord> {
+    const [deck] = await this.deckModel.create([data], { session });
+    return deck.toObject() as unknown as AdminDeckRecord;
+  }
+
   async findDecks(
     filter: Record<string, unknown>,
     page: number,

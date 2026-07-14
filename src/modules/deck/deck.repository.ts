@@ -163,8 +163,16 @@ export class DeckRepository {
       deletedAt: { $exists: false },
     };
 
-    if (keyword) {
-      filter.$text = { $search: keyword };
+    const normalizedKeyword = keyword?.trim();
+
+    if (normalizedKeyword) {
+      const keywordRegex = new RegExp(this.escapeRegex(normalizedKeyword), 'i');
+
+      filter.$or = [
+        { title: keywordRegex },
+        { description: keywordRegex },
+        { tags: keywordRegex },
+      ];
     }
 
     if (visibility) {
@@ -191,6 +199,17 @@ export class DeckRepository {
           moderationStatus: { $ne: 'hidden' },
         };
 
+    if (
+      filter.$or &&
+      Object.prototype.hasOwnProperty.call(accessFilter, '$or')
+    ) {
+      const keywordFilter = filter.$or;
+      delete filter.$or;
+      filter.$and = [{ $or: keywordFilter }, accessFilter];
+
+      return filter;
+    }
+
     if (filter.visibility) {
       filter.$and = [accessFilter];
     } else {
@@ -198,5 +217,9 @@ export class DeckRepository {
     }
 
     return filter;
+  }
+
+  private escapeRegex(value: string) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 }

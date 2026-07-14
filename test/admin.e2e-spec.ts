@@ -15,6 +15,7 @@ import { RoleType } from '../src/common/enums/role-type.enum';
 import { JwtAuthGuard } from '../src/common/guards/jwt.guard';
 import { RolesGuard } from '../src/common/guards/roles.guard';
 import { TransformInterceptor } from '../src/common/interceptors/transform.interceptor';
+import { AdminAcademicController } from '../src/modules/admin/admin-academic.controller';
 import { AdminController } from '../src/modules/admin/admin.controller';
 import { AdminService } from '../src/modules/admin/admin.service';
 
@@ -24,6 +25,9 @@ const ADMIN_ID = '64b390af8462fed8a3f93240';
 const USER_ID = '64b390af8462fed8a3f93241';
 const DECK_ID = '64b390af8462fed8a3f93242';
 const SESSION_ID = '64b390af8462fed8a3f93243';
+const DEPARTMENT_ID = '64b390af8462fed8a3f93244';
+const SUBJECT_ID = '64b390af8462fed8a3f93245';
+const DOCUMENT_ID = '64b390af8462fed8a3f93246';
 
 interface TestRequest {
   headers: IncomingHttpHeaders;
@@ -103,10 +107,42 @@ describe('AdminController (e2e)', () => {
       findAuditLogs: jest
         .fn()
         .mockResolvedValue({ data: [], meta: pageMeta() }),
+      findAcademicDepartments: jest
+        .fn()
+        .mockResolvedValue({ data: [], meta: pageMeta() }),
+      createAcademicDepartment: jest
+        .fn()
+        .mockResolvedValue({ id: DEPARTMENT_ID }),
+      updateAcademicDepartment: jest
+        .fn()
+        .mockResolvedValue({ id: DEPARTMENT_ID }),
+      deleteAcademicDepartment: jest
+        .fn()
+        .mockResolvedValue({ id: DEPARTMENT_ID }),
+      restoreAcademicDepartment: jest
+        .fn()
+        .mockResolvedValue({ id: DEPARTMENT_ID }),
+      findAcademicSubjects: jest
+        .fn()
+        .mockResolvedValue({ data: [], meta: pageMeta() }),
+      createAcademicSubject: jest.fn().mockResolvedValue({ id: SUBJECT_ID }),
+      updateAcademicSubject: jest.fn().mockResolvedValue({ id: SUBJECT_ID }),
+      deleteAcademicSubject: jest.fn().mockResolvedValue({ id: SUBJECT_ID }),
+      restoreAcademicSubject: jest.fn().mockResolvedValue({ id: SUBJECT_ID }),
+      findAcademicDocuments: jest
+        .fn()
+        .mockResolvedValue({ data: [], meta: pageMeta() }),
+      findAcademicDocument: jest.fn().mockResolvedValue({ id: DOCUMENT_ID }),
+      updateAcademicDocument: jest.fn().mockResolvedValue({ id: DOCUMENT_ID }),
+      reviewAcademicDocument: jest
+        .fn()
+        .mockResolvedValue({ id: DOCUMENT_ID, status: 'active' }),
+      deleteAcademicDocument: jest.fn().mockResolvedValue({ id: DOCUMENT_ID }),
+      restoreAcademicDocument: jest.fn().mockResolvedValue({ id: DOCUMENT_ID }),
     };
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      controllers: [AdminController],
+      controllers: [AdminController, AdminAcademicController],
       providers: [
         { provide: AdminService, useValue: adminService },
         { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
@@ -243,6 +279,97 @@ describe('AdminController (e2e)', () => {
 
     await request(server)
       .get('/v1/admin/audit-logs')
+      .set('Authorization', ADMIN_TOKEN)
+      .expect(200);
+
+    await request(server)
+      .get('/v1/admin/academic/departments?status=all')
+      .set('Authorization', ADMIN_TOKEN)
+      .expect(200);
+
+    await request(server)
+      .post('/v1/admin/academic/departments')
+      .set('Authorization', ADMIN_TOKEN)
+      .send({ code: 'SE', name: 'Software Engineering' })
+      .expect(201);
+
+    await request(server)
+      .patch(`/v1/admin/academic/departments/${DEPARTMENT_ID}`)
+      .set('Authorization', ADMIN_TOKEN)
+      .send({ name: 'Software Engineering Updated' })
+      .expect(200);
+
+    await request(server)
+      .delete(`/v1/admin/academic/departments/${DEPARTMENT_ID}`)
+      .set('Authorization', ADMIN_TOKEN)
+      .expect(200);
+
+    await request(server)
+      .post(`/v1/admin/academic/departments/${DEPARTMENT_ID}/restore`)
+      .set('Authorization', ADMIN_TOKEN)
+      .expect(200);
+
+    await request(server)
+      .get(`/v1/admin/academic/subjects?departmentId=${DEPARTMENT_ID}`)
+      .set('Authorization', ADMIN_TOKEN)
+      .expect(200);
+
+    await request(server)
+      .post('/v1/admin/academic/subjects')
+      .set('Authorization', ADMIN_TOKEN)
+      .send({
+        code: 'SWE101',
+        name: 'Software Engineering',
+        departmentId: DEPARTMENT_ID,
+        semester: 1,
+      })
+      .expect(201);
+
+    await request(server)
+      .patch(`/v1/admin/academic/subjects/${SUBJECT_ID}`)
+      .set('Authorization', ADMIN_TOKEN)
+      .send({ semester: 2 })
+      .expect(200);
+
+    await request(server)
+      .delete(`/v1/admin/academic/subjects/${SUBJECT_ID}`)
+      .set('Authorization', ADMIN_TOKEN)
+      .expect(200);
+
+    await request(server)
+      .post(`/v1/admin/academic/subjects/${SUBJECT_ID}/restore`)
+      .set('Authorization', ADMIN_TOKEN)
+      .expect(200);
+
+    await request(server)
+      .get('/v1/admin/academic/documents?status=pending')
+      .set('Authorization', ADMIN_TOKEN)
+      .expect(200);
+
+    await request(server)
+      .get(`/v1/admin/academic/documents/${DOCUMENT_ID}`)
+      .set('Authorization', ADMIN_TOKEN)
+      .expect(200);
+
+    await request(server)
+      .patch(`/v1/admin/academic/documents/${DOCUMENT_ID}`)
+      .set('Authorization', ADMIN_TOKEN)
+      .send({ title: 'Reviewed material' })
+      .expect(200);
+
+    await request(server)
+      .patch(`/v1/admin/academic/documents/${DOCUMENT_ID}/review`)
+      .set('Authorization', ADMIN_TOKEN)
+      .send({ status: 'active', note: 'Looks good' })
+      .expect(200);
+
+    await request(server)
+      .delete(`/v1/admin/academic/documents/${DOCUMENT_ID}`)
+      .set('Authorization', ADMIN_TOKEN)
+      .expect(200);
+
+    await request(server)
+      .post(`/v1/admin/academic/documents/${DOCUMENT_ID}/restore`)
       .set('Authorization', ADMIN_TOKEN)
       .expect(200);
   });

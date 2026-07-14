@@ -78,10 +78,6 @@ export class DocumentService {
       },
       userId,
     );
-    await this.subjectRepository.incrementDocumentCount(
-      createDocumentDto.subjectId,
-      1,
-    );
 
     return this.toResponse(document);
   }
@@ -107,10 +103,12 @@ export class DocumentService {
     }
 
     const archivedDocument = await this.documentRepository.archive(documentId);
-    await this.subjectRepository.incrementDocumentCount(
-      document.subjectId.toString(),
-      -1,
-    );
+    if (document.status === 'active') {
+      await this.subjectRepository.incrementDocumentCount(
+        document.subjectId.toString(),
+        -1,
+      );
+    }
 
     return this.toResponse(archivedDocument ?? document);
   }
@@ -223,6 +221,9 @@ export class DocumentService {
       fileSize: document.fileSize,
       storagePath: document.storagePath,
       status: document.status,
+      reviewedBy: document.reviewedBy?.toString(),
+      reviewedAt: document.reviewedAt,
+      reviewNote: document.reviewNote,
       downloadCount: document.downloadCount,
       tags: document.tags,
       createdAt: plain.createdAt as Date,

@@ -5,9 +5,21 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
-import { Connection, Types } from 'mongoose';
+import { ClientSession, Connection, Types } from 'mongoose';
 import { RoleType } from '../../common/enums/role-type.enum';
+import type { AcademicDocumentStatus } from '../academic/schemas/academic-document.schema';
 import { AdminRepository } from './admin.repository';
+import {
+  AdminAcademicDepartmentQueryDto,
+  AdminAcademicDocumentQueryDto,
+  AdminAcademicSubjectQueryDto,
+  CreateAdminDepartmentDto,
+  CreateAdminSubjectDto,
+  ReviewAdminAcademicDocumentDto,
+  UpdateAdminAcademicDocumentDto,
+  UpdateAdminDepartmentDto,
+  UpdateAdminSubjectDto,
+} from './dto/admin-academic.dto';
 import {
   AdminActivityQueryDto,
   AdminAuditLogQueryDto,
@@ -420,6 +432,534 @@ export class AdminService {
     return this.toPage(result, query.page, query.take);
   }
 
+  async findAcademicDepartments(query: AdminAcademicDepartmentQueryDto) {
+    const filter: Record<string, unknown> = {};
+
+    if (query.keyword?.trim()) {
+      const keyword = new RegExp(this.escapeRegex(query.keyword.trim()), 'i');
+      filter.$or = [
+        { code: keyword },
+        { name: keyword },
+        { description: keyword },
+      ];
+    }
+
+    if (query.status === 'active') filter.isActive = true;
+    if (query.status === 'inactive') filter.isActive = false;
+
+    const result = await this.adminRepository.findAcademicDepartments(
+      filter,
+      query.page,
+      query.take,
+    );
+    return this.toPage(result, query.page, query.take);
+  }
+
+  async createAcademicDepartment(
+    dto: CreateAdminDepartmentDto,
+    adminId: string,
+  ) {
+    return this.withDuplicateKeyMessage(
+      () =>
+        this.connection.transaction(async (session) => {
+          const department =
+            await this.adminRepository.createAcademicDepartment(
+              {
+                code: dto.code.toUpperCase(),
+                name: dto.name,
+                description: dto.description,
+                isActive: dto.isActive ?? true,
+              },
+              session,
+            );
+          await this.adminRepository.createAuditLog(
+            {
+              adminId,
+              action: 'academic.department_created',
+              targetType: 'academic_department',
+              targetId: this.getRecordId(department),
+              metadata: { code: dto.code.toUpperCase() },
+            },
+            session,
+          );
+          return department;
+        }),
+      'Department code already exists',
+    );
+  }
+
+  async updateAcademicDepartment(
+    departmentId: string,
+    dto: UpdateAdminDepartmentDto,
+    adminId: string,
+  ) {
+    const current = await this.requireAcademicDepartment(departmentId);
+    const update = this.buildSetUpdate({
+      code: dto.code?.toUpperCase(),
+      name: dto.name,
+      description: dto.description,
+      isActive: dto.isActive,
+    });
+
+    return this.withDuplicateKeyMessage(
+      () =>
+        this.connection.transaction(async (session) => {
+          const updated = await this.adminRepository.updateAcademicDepartment(
+            departmentId,
+            update,
+            session,
+          );
+          await this.adminRepository.createAuditLog(
+            {
+              adminId,
+              action: 'academic.department_updated',
+              targetType: 'academic_department',
+              targetId: departmentId,
+              metadata: { before: current, after: update.$set },
+            },
+            session,
+          );
+          return updated;
+        }),
+      'Department code already exists',
+    );
+  }
+
+  async deleteAcademicDepartment(departmentId: string, adminId: string) {
+    const current = await this.requireAcademicDepartment(departmentId);
+
+    if (current.isActive === false) {
+      return current;
+    }
+
+    return this.connection.transaction(async (session) => {
+      const updated = await this.adminRepository.updateAcademicDepartment(
+        departmentId,
+        { $set: { isActive: false } },
+        session,
+      );
+      await this.adminRepository.createAuditLog(
+        {
+          adminId,
+          action: 'academic.department_deactivated',
+          targetType: 'academic_department',
+          targetId: departmentId,
+        },
+        session,
+      );
+      return updated;
+    });
+  }
+
+  async restoreAcademicDepartment(departmentId: string, adminId: string) {
+    const current = await this.requireAcademicDepartment(departmentId);
+
+    if (current.isActive !== false) {
+      return current;
+    }
+
+    return this.connection.transaction(async (session) => {
+      const updated = await this.adminRepository.updateAcademicDepartment(
+        departmentId,
+        { $set: { isActive: true } },
+        session,
+      );
+      await this.adminRepository.createAuditLog(
+        {
+          adminId,
+          action: 'academic.department_restored',
+          targetType: 'academic_department',
+          targetId: departmentId,
+        },
+        session,
+      );
+      return updated;
+    });
+  }
+
+  async findAcademicSubjects(query: AdminAcademicSubjectQueryDto) {
+    const filter: Record<string, unknown> = {};
+
+    if (query.keyword?.trim()) {
+      const keyword = new RegExp(this.escapeRegex(query.keyword.trim()), 'i');
+      filter.$or = [{ code: keyword }, { name: keyword }];
+    }
+
+    if (query.departmentId) {
+      filter.departmentId = new Types.ObjectId(query.departmentId);
+    }
+
+    if (query.semester) filter.semester = query.semester;
+    if (query.status === 'active') filter.isActive = true;
+    if (query.status === 'inactive') filter.isActive = false;
+
+    const result = await this.adminRepository.findAcademicSubjects(
+      filter,
+      query.page,
+      query.take,
+    );
+    return this.toPage(result, query.page, query.take);
+  }
+
+  async createAcademicSubject(dto: CreateAdminSubjectDto, adminId: string) {
+    await this.requireActiveAcademicDepartment(dto.departmentId);
+
+    return this.withDuplicateKeyMessage(
+      () =>
+        this.connection.transaction(async (session) => {
+          const subject = await this.adminRepository.createAcademicSubject(
+            {
+              code: dto.code.toUpperCase(),
+              name: dto.name,
+              departmentId: new Types.ObjectId(dto.departmentId),
+              semester: dto.semester,
+              isActive: dto.isActive ?? true,
+            },
+            session,
+          );
+          await this.adminRepository.createAuditLog(
+            {
+              adminId,
+              action: 'academic.subject_created',
+              targetType: 'academic_subject',
+              targetId: this.getRecordId(subject),
+              metadata: {
+                code: dto.code.toUpperCase(),
+                departmentId: dto.departmentId,
+                semester: dto.semester,
+              },
+            },
+            session,
+          );
+          return subject;
+        }),
+      'Subject code already exists in this department',
+    );
+  }
+
+  async updateAcademicSubject(
+    subjectId: string,
+    dto: UpdateAdminSubjectDto,
+    adminId: string,
+  ) {
+    const current = await this.requireAcademicSubject(subjectId);
+    const nextDepartmentId = dto.departmentId;
+
+    if (nextDepartmentId) {
+      await this.requireActiveAcademicDepartment(nextDepartmentId);
+    }
+
+    const update = this.buildSetUpdate({
+      code: dto.code?.toUpperCase(),
+      name: dto.name,
+      departmentId: nextDepartmentId
+        ? new Types.ObjectId(nextDepartmentId)
+        : undefined,
+      semester: dto.semester,
+      isActive: dto.isActive,
+    });
+
+    return this.withDuplicateKeyMessage(
+      () =>
+        this.connection.transaction(async (session) => {
+          const updated = await this.adminRepository.updateAcademicSubject(
+            subjectId,
+            update,
+            session,
+          );
+          await this.adminRepository.createAuditLog(
+            {
+              adminId,
+              action: 'academic.subject_updated',
+              targetType: 'academic_subject',
+              targetId: subjectId,
+              metadata: { before: current, after: update.$set },
+            },
+            session,
+          );
+          return updated;
+        }),
+      'Subject code already exists in this department',
+    );
+  }
+
+  async deleteAcademicSubject(subjectId: string, adminId: string) {
+    const current = await this.requireAcademicSubject(subjectId);
+
+    if (current.isActive === false) {
+      return current;
+    }
+
+    return this.connection.transaction(async (session) => {
+      const updated = await this.adminRepository.updateAcademicSubject(
+        subjectId,
+        { $set: { isActive: false } },
+        session,
+      );
+      await this.adminRepository.createAuditLog(
+        {
+          adminId,
+          action: 'academic.subject_deactivated',
+          targetType: 'academic_subject',
+          targetId: subjectId,
+        },
+        session,
+      );
+      return updated;
+    });
+  }
+
+  async restoreAcademicSubject(subjectId: string, adminId: string) {
+    const current = await this.requireAcademicSubject(subjectId);
+    await this.requireActiveAcademicDepartment(
+      this.getObjectIdString(current.departmentId),
+    );
+
+    if (current.isActive !== false) {
+      return current;
+    }
+
+    return this.connection.transaction(async (session) => {
+      const updated = await this.adminRepository.updateAcademicSubject(
+        subjectId,
+        { $set: { isActive: true } },
+        session,
+      );
+      await this.adminRepository.createAuditLog(
+        {
+          adminId,
+          action: 'academic.subject_restored',
+          targetType: 'academic_subject',
+          targetId: subjectId,
+        },
+        session,
+      );
+      return updated;
+    });
+  }
+
+  async findAcademicDocuments(query: AdminAcademicDocumentQueryDto) {
+    const filter: Record<string, unknown> = {};
+
+    if (query.keyword?.trim()) {
+      const keyword = new RegExp(this.escapeRegex(query.keyword.trim()), 'i');
+      filter.$or = [
+        { title: keyword },
+        { description: keyword },
+        { fileName: keyword },
+        { tags: keyword },
+      ];
+    }
+
+    if (query.status && query.status !== 'all') {
+      filter.status = query.status;
+    } else if (!query.status) {
+      filter.status = { $ne: 'archived' };
+    }
+
+    if (query.subjectId) filter.subjectId = new Types.ObjectId(query.subjectId);
+    if (query.uploaderId)
+      filter.uploadedBy = new Types.ObjectId(query.uploaderId);
+    if (query.fileType) filter.fileType = query.fileType;
+
+    const result = await this.adminRepository.findAcademicDocuments(
+      filter,
+      query.page,
+      query.take,
+      query.departmentId,
+    );
+    return this.toPage(result, query.page, query.take);
+  }
+
+  async findAcademicDocument(documentId: string) {
+    return this.requireAcademicDocument(documentId);
+  }
+
+  async updateAcademicDocument(
+    documentId: string,
+    dto: UpdateAdminAcademicDocumentDto,
+    adminId: string,
+  ) {
+    const current = await this.requireAcademicDocument(documentId);
+    const currentSubjectId = this.getObjectIdString(current.subjectId);
+    const nextSubjectId = dto.subjectId ?? currentSubjectId;
+
+    if (dto.subjectId && dto.subjectId !== currentSubjectId) {
+      await this.requireActiveAcademicSubject(dto.subjectId);
+    }
+
+    const update = this.buildSetUpdate({
+      title: dto.title,
+      description: dto.description,
+      subjectId: dto.subjectId ? new Types.ObjectId(dto.subjectId) : undefined,
+      tags: dto.tags ? this.normalizeTags(dto.tags) : undefined,
+    });
+
+    return this.connection.transaction(async (session) => {
+      const updated = await this.adminRepository.updateAcademicDocument(
+        documentId,
+        update,
+        session,
+      );
+
+      if (
+        current.status === 'active' &&
+        dto.subjectId &&
+        dto.subjectId !== currentSubjectId
+      ) {
+        await this.adminRepository.incrementAcademicSubjectDocumentCount(
+          currentSubjectId,
+          -1,
+          session,
+        );
+        await this.adminRepository.incrementAcademicSubjectDocumentCount(
+          nextSubjectId,
+          1,
+          session,
+        );
+      }
+
+      await this.adminRepository.createAuditLog(
+        {
+          adminId,
+          action: 'academic.document_updated',
+          targetType: 'academic_document',
+          targetId: documentId,
+          metadata: { before: current, after: update.$set },
+        },
+        session,
+      );
+      return updated;
+    });
+  }
+
+  async reviewAcademicDocument(
+    documentId: string,
+    dto: ReviewAdminAcademicDocumentDto,
+    adminId: string,
+  ) {
+    const current = await this.requireAcademicDocument(documentId);
+
+    if (current.status === 'archived') {
+      throw new BadRequestException('Archived document cannot be reviewed');
+    }
+
+    const subjectId = this.getObjectIdString(current.subjectId);
+    if (dto.status === 'active') {
+      await this.requireActiveAcademicSubject(subjectId);
+    }
+
+    const setUpdate: Record<string, unknown> = {
+      status: dto.status,
+      reviewedBy: new Types.ObjectId(adminId),
+      reviewedAt: new Date(),
+    };
+    const update: Record<string, unknown> = { $set: setUpdate };
+
+    if (dto.note?.trim()) {
+      setUpdate.reviewNote = dto.note.trim();
+    } else {
+      update.$unset = { reviewNote: 1 };
+    }
+
+    return this.connection.transaction(async (session) => {
+      const updated = await this.adminRepository.updateAcademicDocument(
+        documentId,
+        update,
+        session,
+      );
+      await this.adjustSubjectDocumentCount(
+        current.status,
+        dto.status,
+        subjectId,
+        session,
+      );
+      await this.adminRepository.createAuditLog(
+        {
+          adminId,
+          action: 'academic.document_reviewed',
+          targetType: 'academic_document',
+          targetId: documentId,
+          metadata: {
+            from: current.status,
+            to: dto.status,
+            note: dto.note,
+          },
+        },
+        session,
+      );
+      return updated;
+    });
+  }
+
+  async deleteAcademicDocument(documentId: string, adminId: string) {
+    const current = await this.requireAcademicDocument(documentId);
+
+    if (current.status === 'archived') {
+      return current;
+    }
+
+    const subjectId = this.getObjectIdString(current.subjectId);
+
+    return this.connection.transaction(async (session) => {
+      const updated = await this.adminRepository.updateAcademicDocument(
+        documentId,
+        { $set: { status: 'archived' } },
+        session,
+      );
+
+      if (current.status === 'active') {
+        await this.adminRepository.incrementAcademicSubjectDocumentCount(
+          subjectId,
+          -1,
+          session,
+        );
+      }
+
+      await this.adminRepository.createAuditLog(
+        {
+          adminId,
+          action: 'academic.document_archived',
+          targetType: 'academic_document',
+          targetId: documentId,
+          metadata: { from: current.status },
+        },
+        session,
+      );
+      return updated;
+    });
+  }
+
+  async restoreAcademicDocument(documentId: string, adminId: string) {
+    const current = await this.requireAcademicDocument(documentId);
+
+    if (current.status !== 'archived') {
+      return current;
+    }
+
+    return this.connection.transaction(async (session) => {
+      const updated = await this.adminRepository.updateAcademicDocument(
+        documentId,
+        {
+          $set: { status: 'pending' },
+          $unset: { reviewedBy: 1, reviewedAt: 1, reviewNote: 1 },
+        },
+        session,
+      );
+      await this.adminRepository.createAuditLog(
+        {
+          adminId,
+          action: 'academic.document_restored',
+          targetType: 'academic_document',
+          targetId: documentId,
+          metadata: { to: 'pending' },
+        },
+        session,
+      );
+      return updated;
+    });
+  }
+
   private async requireUser(userId: string) {
     const user = await this.adminRepository.findUserById(userId);
     if (!user) throw new NotFoundException('User not found');
@@ -430,6 +970,112 @@ export class AdminService {
     const deck = await this.adminRepository.findDeckById(deckId);
     if (!deck) throw new NotFoundException('Deck not found');
     return deck;
+  }
+
+  private async requireAcademicDepartment(departmentId: string) {
+    const department =
+      await this.adminRepository.findAcademicDepartmentById(departmentId);
+    if (!department) {
+      throw new NotFoundException('Department not found');
+    }
+    return department;
+  }
+
+  private async requireActiveAcademicDepartment(departmentId: string) {
+    const department = await this.requireAcademicDepartment(departmentId);
+    if (department.isActive === false) {
+      throw new BadRequestException('Department is inactive');
+    }
+    return department;
+  }
+
+  private async requireAcademicSubject(subjectId: string) {
+    const subject =
+      await this.adminRepository.findAcademicSubjectById(subjectId);
+    if (!subject) {
+      throw new NotFoundException('Subject not found');
+    }
+    return subject;
+  }
+
+  private async requireActiveAcademicSubject(subjectId: string) {
+    const subject = await this.requireAcademicSubject(subjectId);
+    if (subject.isActive === false) {
+      throw new BadRequestException('Subject is inactive');
+    }
+    await this.requireActiveAcademicDepartment(
+      this.getObjectIdString(subject.departmentId),
+    );
+    return subject;
+  }
+
+  private async requireAcademicDocument(documentId: string) {
+    const document =
+      await this.adminRepository.findAcademicDocumentById(documentId);
+    if (!document) {
+      throw new NotFoundException('Academic document not found');
+    }
+    return document;
+  }
+
+  private buildSetUpdate(set: Record<string, unknown>) {
+    const normalizedSet = Object.fromEntries(
+      Object.entries(set).filter(([, value]) => value !== undefined),
+    );
+
+    if (!Object.keys(normalizedSet).length) {
+      throw new BadRequestException('No changes provided');
+    }
+
+    return { $set: normalizedSet };
+  }
+
+  private getRecordId(record: Record<string, unknown>) {
+    return this.getObjectIdString(record._id);
+  }
+
+  private getObjectIdString(value: unknown) {
+    if (value instanceof Types.ObjectId) {
+      return value.toString();
+    }
+
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    throw new BadRequestException('Invalid object id reference');
+  }
+
+  private normalizeTags(tags: string[]) {
+    return Array.from(new Set(tags.map((tag) => tag.trim()).filter(Boolean)));
+  }
+
+  private async adjustSubjectDocumentCount(
+    fromStatus: AcademicDocumentStatus | undefined,
+    toStatus: AcademicDocumentStatus,
+    subjectId: string,
+    session: ClientSession,
+  ) {
+    if (fromStatus === toStatus) {
+      return;
+    }
+
+    if (fromStatus === 'active') {
+      await this.adminRepository.incrementAcademicSubjectDocumentCount(
+        subjectId,
+        -1,
+        session,
+      );
+      return;
+    }
+
+    if (toStatus === 'active') {
+      await this.adminRepository.incrementAcademicSubjectDocumentCount(
+        subjectId,
+        1,
+        session,
+      );
+    }
   }
 
   private resolveDateRange(fromValue?: string, toValue?: string) {
@@ -469,5 +1115,28 @@ export class AdminService {
 
   private escapeRegex(value: string) {
     return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  private async withDuplicateKeyMessage<T>(
+    operation: () => Promise<T>,
+    message: string,
+  ) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (this.isDuplicateKeyError(error)) {
+        throw new BadRequestException(message);
+      }
+      throw error;
+    }
+  }
+
+  private isDuplicateKeyError(error: unknown) {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      error.code === 11000
+    );
   }
 }

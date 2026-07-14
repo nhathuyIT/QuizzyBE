@@ -19,8 +19,23 @@ export class AdminAuditLog {
   @Prop({ required: true, index: true })
   action!: string;
 
-  @Prop({ required: true, enum: ['user', 'deck'], index: true })
-  targetType!: 'user' | 'deck';
+  @Prop({
+    required: true,
+    enum: [
+      'user',
+      'deck',
+      'academic_department',
+      'academic_subject',
+      'academic_document',
+    ],
+    index: true,
+  })
+  targetType!:
+    | 'user'
+    | 'deck'
+    | 'academic_department'
+    | 'academic_subject'
+    | 'academic_document';
 
   @Prop({ type: MongooseSchema.Types.ObjectId, required: true, index: true })
   targetId!: Types.ObjectId;

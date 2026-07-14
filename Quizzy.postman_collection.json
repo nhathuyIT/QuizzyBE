@@ -2959,7 +2959,7 @@
     },
     {
       "name": "Academic Documents",
-      "description": "Academic document APIs. Run npm run seed:academic first to create departments and subjects. POST document stores Firebase metadata only; upload the actual file from FE to Firebase Storage.",
+      "description": "Academic document APIs. Run npm run seed:academic first to create departments and subjects. POST document stores file metadata only and creates a pending document; approve it under Admin Monitoring V1 > Academic Management before it appears in public subject document lists.",
       "item": [
         {
           "name": "Academic - List Departments",
@@ -3094,7 +3094,7 @@
                 }
               ]
             },
-            "description": "Lists active documents for the selected subject."
+            "description": "Lists approved/active documents for the selected subject."
           },
           "response": []
         },
@@ -3155,7 +3155,7 @@
                 "documents"
               ]
             },
-            "description": "Creates document metadata after the FE uploads the file to Firebase Storage."
+            "description": "Creates pending document metadata after the FE uploads the file to storage. Admin must approve it before public users can see it."
           },
           "response": []
         },
@@ -3205,7 +3205,7 @@
                 }
               ]
             },
-            "description": "Lists documents uploaded by the current user."
+            "description": "Lists documents uploaded by the current user, including pending/rejected items."
           },
           "response": []
         },
@@ -4467,6 +4467,1383 @@
                 }
               },
               "response": []
+            }
+          ]
+        },
+        {
+          "name": "Academic Management",
+          "description": "Admin-only academic portal APIs. Login with Authentication > Login Admin first. Documents uploaded by users are pending by default; approve them here before they appear in public academic document lists.",
+          "item": [
+            {
+              "name": "Departments",
+              "item": [
+                {
+                  "name": "Admin - List Academic Departments",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('status is 200', function () {",
+                          "  pm.response.to.have.status(200);",
+                          "});",
+                          "",
+                          "function objectIdToString(value) {",
+                          "  if (!value) return undefined;",
+                          "  if (typeof value === 'string') return value;",
+                          "  if (value.$oid) return value.$oid;",
+                          "  if (value.buffer) {",
+                          "    return Object.keys(value.buffer)",
+                          "      .sort((a, b) => Number(a) - Number(b))",
+                          "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
+                          "      .join('');",
+                          "  }",
+                          "  return undefined;",
+                          "}",
+                          "",
+                          "function unwrapData(json) {",
+                          "  return json?.data?.data ?? json?.data ?? [];",
+                          "}",
+                          "",
+                          "function readId(record) {",
+                          "  return objectIdToString(record?._id ?? record?.id);",
+                          "}",
+                          "",
+                          "const json = pm.response.json();",
+                          "const rows = unwrapData(json);",
+                          "const selected = rows.find((item) => item.code === \"AI\") || rows[0];",
+                          "const id = readId(selected);",
+                          "if (id) pm.collectionVariables.set('academicDepartmentId', id);",
+                          "",
+                          "pm.test('academicDepartmentId is saved when departments exists', function () {",
+                          "  const value = pm.collectionVariables.get('academicDepartmentId');",
+                          "  if (rows.length) pm.expect(value).to.be.a('string').and.not.empty;",
+                          "});"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "GET",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{adminAccessToken}}",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/v1/admin/academic/departments?page=1&take=20&status=all",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "v1",
+                        "admin",
+                        "academic",
+                        "departments"
+                      ],
+                      "query": [
+                        {
+                          "key": "page",
+                          "value": "1"
+                        },
+                        {
+                          "key": "take",
+                          "value": "20"
+                        },
+                        {
+                          "key": "status",
+                          "value": "all",
+                          "description": "active | inactive | all"
+                        },
+                        {
+                          "key": "keyword",
+                          "value": "",
+                          "disabled": true
+                        }
+                      ]
+                    },
+                    "description": "Lists all departments for admin and saves academicDepartmentId from AI or the first result."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Admin - Create Academic Department",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('status is 201', function () {",
+                          "  pm.response.to.have.status(201);",
+                          "});",
+                          "",
+                          "function objectIdToString(value) {",
+                          "  if (!value) return undefined;",
+                          "  if (typeof value === 'string') return value;",
+                          "  if (value.$oid) return value.$oid;",
+                          "  if (value.buffer) {",
+                          "    return Object.keys(value.buffer)",
+                          "      .sort((a, b) => Number(a) - Number(b))",
+                          "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
+                          "      .join('');",
+                          "  }",
+                          "  return undefined;",
+                          "}",
+                          "",
+                          "function unwrapData(json) {",
+                          "  return json?.data?.data ?? json?.data ?? [];",
+                          "}",
+                          "",
+                          "function readId(record) {",
+                          "  return objectIdToString(record?._id ?? record?.id);",
+                          "}",
+                          "",
+                          "const json = pm.response.json();",
+                          "const id = readId(json?.data);",
+                          "if (id) pm.collectionVariables.set('academicDepartmentId', id);",
+                          "",
+                          "pm.test('academicDepartmentId is saved', function () {",
+                          "  pm.expect(pm.collectionVariables.get('academicDepartmentId')).to.be.a('string').and.not.empty;",
+                          "});"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{adminAccessToken}}",
+                        "type": "text"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/v1/admin/academic/departments",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "v1",
+                        "admin",
+                        "academic",
+                        "departments"
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"code\": \"SE\",\n  \"name\": \"Software Engineering\",\n  \"description\": \"Created from Postman admin academic portal.\",\n  \"isActive\": true\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "description": "Creates a department and saves academicDepartmentId."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Admin - Update Academic Department",
+                  "event": [
+                    {
+                      "listen": "prerequest",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "const missing = [\"academicDepartmentId\"].filter((key) => !pm.collectionVariables.get(key));",
+                          "if (missing.length) {",
+                          "  console.warn(`Missing ${missing.join(', ')}. Set the variable manually or run the matching list/create request first.`);",
+                          "}"
+                        ]
+                      }
+                    },
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('status is 200', function () {",
+                          "  pm.response.to.have.status(200);",
+                          "});"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "PATCH",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{adminAccessToken}}",
+                        "type": "text"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/v1/admin/academic/departments/{{academicDepartmentId}}",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "v1",
+                        "admin",
+                        "academic",
+                        "departments",
+                        "{{academicDepartmentId}}"
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"name\": \"Software Engineering Updated\",\n  \"description\": \"Updated from Postman.\",\n  \"isActive\": true\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Admin - Deactivate Academic Department",
+                  "event": [
+                    {
+                      "listen": "prerequest",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "const missing = [\"academicDepartmentId\"].filter((key) => !pm.collectionVariables.get(key));",
+                          "if (missing.length) {",
+                          "  console.warn(`Missing ${missing.join(', ')}. Set the variable manually or run the matching list/create request first.`);",
+                          "}"
+                        ]
+                      }
+                    },
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('status is 200', function () {",
+                          "  pm.response.to.have.status(200);",
+                          "});"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "DELETE",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{adminAccessToken}}",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/v1/admin/academic/departments/{{academicDepartmentId}}",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "v1",
+                        "admin",
+                        "academic",
+                        "departments",
+                        "{{academicDepartmentId}}"
+                      ]
+                    },
+                    "description": "Soft deactivates the department."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Admin - Restore Academic Department",
+                  "event": [
+                    {
+                      "listen": "prerequest",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "const missing = [\"academicDepartmentId\"].filter((key) => !pm.collectionVariables.get(key));",
+                          "if (missing.length) {",
+                          "  console.warn(`Missing ${missing.join(', ')}. Set the variable manually or run the matching list/create request first.`);",
+                          "}"
+                        ]
+                      }
+                    },
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('status is 200', function () {",
+                          "  pm.response.to.have.status(200);",
+                          "});"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{adminAccessToken}}",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/v1/admin/academic/departments/{{academicDepartmentId}}/restore",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "v1",
+                        "admin",
+                        "academic",
+                        "departments",
+                        "{{academicDepartmentId}}",
+                        "restore"
+                      ]
+                    }
+                  },
+                  "response": []
+                }
+              ]
+            },
+            {
+              "name": "Subjects",
+              "item": [
+                {
+                  "name": "Admin - List Academic Subjects",
+                  "event": [
+                    {
+                      "listen": "prerequest",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "const missing = [\"academicDepartmentId\"].filter((key) => !pm.collectionVariables.get(key));",
+                          "if (missing.length) {",
+                          "  console.warn(`Missing ${missing.join(', ')}. Set the variable manually or run the matching list/create request first.`);",
+                          "}"
+                        ]
+                      }
+                    },
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('status is 200', function () {",
+                          "  pm.response.to.have.status(200);",
+                          "});",
+                          "",
+                          "function objectIdToString(value) {",
+                          "  if (!value) return undefined;",
+                          "  if (typeof value === 'string') return value;",
+                          "  if (value.$oid) return value.$oid;",
+                          "  if (value.buffer) {",
+                          "    return Object.keys(value.buffer)",
+                          "      .sort((a, b) => Number(a) - Number(b))",
+                          "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
+                          "      .join('');",
+                          "  }",
+                          "  return undefined;",
+                          "}",
+                          "",
+                          "function unwrapData(json) {",
+                          "  return json?.data?.data ?? json?.data ?? [];",
+                          "}",
+                          "",
+                          "function readId(record) {",
+                          "  return objectIdToString(record?._id ?? record?.id);",
+                          "}",
+                          "",
+                          "const json = pm.response.json();",
+                          "const rows = unwrapData(json);",
+                          "const selected = rows.find((item) => item.code === \"PRF192\") || rows[0];",
+                          "const id = readId(selected);",
+                          "if (id) pm.collectionVariables.set('academicSubjectId', id);",
+                          "",
+                          "pm.test('academicSubjectId is saved when subjects exists', function () {",
+                          "  const value = pm.collectionVariables.get('academicSubjectId');",
+                          "  if (rows.length) pm.expect(value).to.be.a('string').and.not.empty;",
+                          "});"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "GET",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{adminAccessToken}}",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/v1/admin/academic/subjects?page=1&take=20&status=all&departmentId={{academicDepartmentId}}",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "v1",
+                        "admin",
+                        "academic",
+                        "subjects"
+                      ],
+                      "query": [
+                        {
+                          "key": "page",
+                          "value": "1"
+                        },
+                        {
+                          "key": "take",
+                          "value": "20"
+                        },
+                        {
+                          "key": "status",
+                          "value": "all",
+                          "description": "active | inactive | all"
+                        },
+                        {
+                          "key": "departmentId",
+                          "value": "{{academicDepartmentId}}"
+                        },
+                        {
+                          "key": "semester",
+                          "value": "1",
+                          "disabled": true
+                        },
+                        {
+                          "key": "keyword",
+                          "value": "",
+                          "disabled": true
+                        }
+                      ]
+                    },
+                    "description": "Lists subjects and saves academicSubjectId from PRF192 or the first result."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Admin - Create Academic Subject",
+                  "event": [
+                    {
+                      "listen": "prerequest",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "const missing = [\"academicDepartmentId\"].filter((key) => !pm.collectionVariables.get(key));",
+                          "if (missing.length) {",
+                          "  console.warn(`Missing ${missing.join(', ')}. Set the variable manually or run the matching list/create request first.`);",
+                          "}"
+                        ]
+                      }
+                    },
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('status is 201', function () {",
+                          "  pm.response.to.have.status(201);",
+                          "});",
+                          "",
+                          "function objectIdToString(value) {",
+                          "  if (!value) return undefined;",
+                          "  if (typeof value === 'string') return value;",
+                          "  if (value.$oid) return value.$oid;",
+                          "  if (value.buffer) {",
+                          "    return Object.keys(value.buffer)",
+                          "      .sort((a, b) => Number(a) - Number(b))",
+                          "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
+                          "      .join('');",
+                          "  }",
+                          "  return undefined;",
+                          "}",
+                          "",
+                          "function unwrapData(json) {",
+                          "  return json?.data?.data ?? json?.data ?? [];",
+                          "}",
+                          "",
+                          "function readId(record) {",
+                          "  return objectIdToString(record?._id ?? record?.id);",
+                          "}",
+                          "",
+                          "const json = pm.response.json();",
+                          "const id = readId(json?.data);",
+                          "if (id) pm.collectionVariables.set('academicSubjectId', id);",
+                          "",
+                          "pm.test('academicSubjectId is saved', function () {",
+                          "  pm.expect(pm.collectionVariables.get('academicSubjectId')).to.be.a('string').and.not.empty;",
+                          "});"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{adminAccessToken}}",
+                        "type": "text"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/v1/admin/academic/subjects",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "v1",
+                        "admin",
+                        "academic",
+                        "subjects"
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"code\": \"SWE101\",\n  \"name\": \"Software Engineering\",\n  \"departmentId\": \"{{academicDepartmentId}}\",\n  \"semester\": 1,\n  \"isActive\": true\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "description": "Creates a subject in academicDepartmentId and saves academicSubjectId."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Admin - Update Academic Subject",
+                  "event": [
+                    {
+                      "listen": "prerequest",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "const missing = [\"academicSubjectId\"].filter((key) => !pm.collectionVariables.get(key));",
+                          "if (missing.length) {",
+                          "  console.warn(`Missing ${missing.join(', ')}. Set the variable manually or run the matching list/create request first.`);",
+                          "}"
+                        ]
+                      }
+                    },
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('status is 200', function () {",
+                          "  pm.response.to.have.status(200);",
+                          "});"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "PATCH",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{adminAccessToken}}",
+                        "type": "text"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/v1/admin/academic/subjects/{{academicSubjectId}}",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "v1",
+                        "admin",
+                        "academic",
+                        "subjects",
+                        "{{academicSubjectId}}"
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"name\": \"Software Engineering Updated\",\n  \"semester\": 2,\n  \"isActive\": true\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Admin - Deactivate Academic Subject",
+                  "event": [
+                    {
+                      "listen": "prerequest",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "const missing = [\"academicSubjectId\"].filter((key) => !pm.collectionVariables.get(key));",
+                          "if (missing.length) {",
+                          "  console.warn(`Missing ${missing.join(', ')}. Set the variable manually or run the matching list/create request first.`);",
+                          "}"
+                        ]
+                      }
+                    },
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('status is 200', function () {",
+                          "  pm.response.to.have.status(200);",
+                          "});"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "DELETE",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{adminAccessToken}}",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/v1/admin/academic/subjects/{{academicSubjectId}}",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "v1",
+                        "admin",
+                        "academic",
+                        "subjects",
+                        "{{academicSubjectId}}"
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Admin - Restore Academic Subject",
+                  "event": [
+                    {
+                      "listen": "prerequest",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "const missing = [\"academicSubjectId\"].filter((key) => !pm.collectionVariables.get(key));",
+                          "if (missing.length) {",
+                          "  console.warn(`Missing ${missing.join(', ')}. Set the variable manually or run the matching list/create request first.`);",
+                          "}"
+                        ]
+                      }
+                    },
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('status is 200', function () {",
+                          "  pm.response.to.have.status(200);",
+                          "});"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{adminAccessToken}}",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/v1/admin/academic/subjects/{{academicSubjectId}}/restore",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "v1",
+                        "admin",
+                        "academic",
+                        "subjects",
+                        "{{academicSubjectId}}",
+                        "restore"
+                      ]
+                    }
+                  },
+                  "response": []
+                }
+              ]
+            },
+            {
+              "name": "Document Review",
+              "item": [
+                {
+                  "name": "Admin - List Pending Academic Documents",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('status is 200', function () {",
+                          "  pm.response.to.have.status(200);",
+                          "});",
+                          "",
+                          "function objectIdToString(value) {",
+                          "  if (!value) return undefined;",
+                          "  if (typeof value === 'string') return value;",
+                          "  if (value.$oid) return value.$oid;",
+                          "  if (value.buffer) {",
+                          "    return Object.keys(value.buffer)",
+                          "      .sort((a, b) => Number(a) - Number(b))",
+                          "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
+                          "      .join('');",
+                          "  }",
+                          "  return undefined;",
+                          "}",
+                          "",
+                          "function unwrapData(json) {",
+                          "  return json?.data?.data ?? json?.data ?? [];",
+                          "}",
+                          "",
+                          "function readId(record) {",
+                          "  return objectIdToString(record?._id ?? record?.id);",
+                          "}",
+                          "",
+                          "const json = pm.response.json();",
+                          "const rows = unwrapData(json);",
+                          "const selected = rows[0];",
+                          "const id = readId(selected);",
+                          "if (id) pm.collectionVariables.set('academicDocumentId', id);",
+                          "",
+                          "pm.test('academicDocumentId is saved when pending documents exists', function () {",
+                          "  const value = pm.collectionVariables.get('academicDocumentId');",
+                          "  if (rows.length) pm.expect(value).to.be.a('string').and.not.empty;",
+                          "});"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "GET",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{adminAccessToken}}",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/v1/admin/academic/documents?page=1&take=20&status=pending",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "v1",
+                        "admin",
+                        "academic",
+                        "documents"
+                      ],
+                      "query": [
+                        {
+                          "key": "page",
+                          "value": "1"
+                        },
+                        {
+                          "key": "take",
+                          "value": "20"
+                        },
+                        {
+                          "key": "status",
+                          "value": "pending",
+                          "description": "pending | active | rejected | archived | all"
+                        },
+                        {
+                          "key": "departmentId",
+                          "value": "{{academicDepartmentId}}",
+                          "disabled": true
+                        },
+                        {
+                          "key": "subjectId",
+                          "value": "{{academicSubjectId}}",
+                          "disabled": true
+                        },
+                        {
+                          "key": "uploaderId",
+                          "value": "{{adminUserId}}",
+                          "disabled": true
+                        },
+                        {
+                          "key": "fileType",
+                          "value": "pdf",
+                          "disabled": true
+                        },
+                        {
+                          "key": "keyword",
+                          "value": "",
+                          "disabled": true
+                        }
+                      ]
+                    },
+                    "description": "Lists pending documents for admin review and saves academicDocumentId from the first result."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Admin - List All Academic Documents",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('status is 200', function () {",
+                          "  pm.response.to.have.status(200);",
+                          "});",
+                          "",
+                          "function objectIdToString(value) {",
+                          "  if (!value) return undefined;",
+                          "  if (typeof value === 'string') return value;",
+                          "  if (value.$oid) return value.$oid;",
+                          "  if (value.buffer) {",
+                          "    return Object.keys(value.buffer)",
+                          "      .sort((a, b) => Number(a) - Number(b))",
+                          "      .map((key) => Number(value.buffer[key]).toString(16).padStart(2, '0'))",
+                          "      .join('');",
+                          "  }",
+                          "  return undefined;",
+                          "}",
+                          "",
+                          "function unwrapData(json) {",
+                          "  return json?.data?.data ?? json?.data ?? [];",
+                          "}",
+                          "",
+                          "function readId(record) {",
+                          "  return objectIdToString(record?._id ?? record?.id);",
+                          "}",
+                          "",
+                          "const json = pm.response.json();",
+                          "const rows = unwrapData(json);",
+                          "const selected = rows[0];",
+                          "const id = readId(selected);",
+                          "if (id) pm.collectionVariables.set('academicDocumentId', id);",
+                          "",
+                          "pm.test('academicDocumentId is saved when documents exists', function () {",
+                          "  const value = pm.collectionVariables.get('academicDocumentId');",
+                          "  if (rows.length) pm.expect(value).to.be.a('string').and.not.empty;",
+                          "});"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "GET",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{adminAccessToken}}",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/v1/admin/academic/documents?page=1&take=20&status=all",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "v1",
+                        "admin",
+                        "academic",
+                        "documents"
+                      ],
+                      "query": [
+                        {
+                          "key": "page",
+                          "value": "1"
+                        },
+                        {
+                          "key": "take",
+                          "value": "20"
+                        },
+                        {
+                          "key": "status",
+                          "value": "all"
+                        },
+                        {
+                          "key": "keyword",
+                          "value": "",
+                          "disabled": true
+                        }
+                      ]
+                    },
+                    "description": "Lists all document statuses for admin."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Admin - Get Academic Document Detail",
+                  "event": [
+                    {
+                      "listen": "prerequest",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "const missing = [\"academicDocumentId\"].filter((key) => !pm.collectionVariables.get(key));",
+                          "if (missing.length) {",
+                          "  console.warn(`Missing ${missing.join(', ')}. Set the variable manually or run the matching list/create request first.`);",
+                          "}"
+                        ]
+                      }
+                    },
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('status is 200', function () {",
+                          "  pm.response.to.have.status(200);",
+                          "});"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "GET",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{adminAccessToken}}",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/v1/admin/academic/documents/{{academicDocumentId}}",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "v1",
+                        "admin",
+                        "academic",
+                        "documents",
+                        "{{academicDocumentId}}"
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Admin - Update Academic Document Metadata",
+                  "event": [
+                    {
+                      "listen": "prerequest",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "const missing = [\"academicDocumentId\"].filter((key) => !pm.collectionVariables.get(key));",
+                          "if (missing.length) {",
+                          "  console.warn(`Missing ${missing.join(', ')}. Set the variable manually or run the matching list/create request first.`);",
+                          "}"
+                        ]
+                      }
+                    },
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('status is 200', function () {",
+                          "  pm.response.to.have.status(200);",
+                          "});"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "PATCH",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{adminAccessToken}}",
+                        "type": "text"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/v1/admin/academic/documents/{{academicDocumentId}}",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "v1",
+                        "admin",
+                        "academic",
+                        "documents",
+                        "{{academicDocumentId}}"
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"title\": \"Reviewed Academic Material\",\n  \"description\": \"Metadata updated by admin before approval.\",\n  \"subjectId\": \"{{academicSubjectId}}\",\n  \"tags\": [\n    \"reviewed\",\n    \"academic\"\n  ]\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "description": "Admin can update title, description, subjectId, and tags before/after review."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Admin - Approve Academic Document",
+                  "event": [
+                    {
+                      "listen": "prerequest",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "const missing = [\"academicDocumentId\"].filter((key) => !pm.collectionVariables.get(key));",
+                          "if (missing.length) {",
+                          "  console.warn(`Missing ${missing.join(', ')}. Set the variable manually or run the matching list/create request first.`);",
+                          "}"
+                        ]
+                      }
+                    },
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('status is 200', function () {",
+                          "  pm.response.to.have.status(200);",
+                          "});"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "PATCH",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{adminAccessToken}}",
+                        "type": "text"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/v1/admin/academic/documents/{{academicDocumentId}}/review",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "v1",
+                        "admin",
+                        "academic",
+                        "documents",
+                        "{{academicDocumentId}}",
+                        "review"
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"status\": \"active\",\n  \"note\": \"Approved from Postman.\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "description": "Approves a pending/rejected document. Approved documents become public under subject documents."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Admin - Reject Academic Document",
+                  "event": [
+                    {
+                      "listen": "prerequest",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "const missing = [\"academicDocumentId\"].filter((key) => !pm.collectionVariables.get(key));",
+                          "if (missing.length) {",
+                          "  console.warn(`Missing ${missing.join(', ')}. Set the variable manually or run the matching list/create request first.`);",
+                          "}"
+                        ]
+                      }
+                    },
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('status is 200', function () {",
+                          "  pm.response.to.have.status(200);",
+                          "});"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "PATCH",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{adminAccessToken}}",
+                        "type": "text"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/v1/admin/academic/documents/{{academicDocumentId}}/review",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "v1",
+                        "admin",
+                        "academic",
+                        "documents",
+                        "{{academicDocumentId}}",
+                        "review"
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"status\": \"rejected\",\n  \"note\": \"Rejected from Postman.\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Admin - Move Academic Document Back To Pending",
+                  "event": [
+                    {
+                      "listen": "prerequest",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "const missing = [\"academicDocumentId\"].filter((key) => !pm.collectionVariables.get(key));",
+                          "if (missing.length) {",
+                          "  console.warn(`Missing ${missing.join(', ')}. Set the variable manually or run the matching list/create request first.`);",
+                          "}"
+                        ]
+                      }
+                    },
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('status is 200', function () {",
+                          "  pm.response.to.have.status(200);",
+                          "});"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "PATCH",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{adminAccessToken}}",
+                        "type": "text"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/v1/admin/academic/documents/{{academicDocumentId}}/review",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "v1",
+                        "admin",
+                        "academic",
+                        "documents",
+                        "{{academicDocumentId}}",
+                        "review"
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"status\": \"pending\",\n  \"note\": \"Needs another review pass.\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Admin - Archive Academic Document",
+                  "event": [
+                    {
+                      "listen": "prerequest",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "const missing = [\"academicDocumentId\"].filter((key) => !pm.collectionVariables.get(key));",
+                          "if (missing.length) {",
+                          "  console.warn(`Missing ${missing.join(', ')}. Set the variable manually or run the matching list/create request first.`);",
+                          "}"
+                        ]
+                      }
+                    },
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('status is 200', function () {",
+                          "  pm.response.to.have.status(200);",
+                          "});"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "DELETE",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{adminAccessToken}}",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/v1/admin/academic/documents/{{academicDocumentId}}",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "v1",
+                        "admin",
+                        "academic",
+                        "documents",
+                        "{{academicDocumentId}}"
+                      ]
+                    },
+                    "description": "Archives the document. If it was active, subject documentCount is decremented."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Admin - Restore Academic Document To Pending",
+                  "event": [
+                    {
+                      "listen": "prerequest",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "const missing = [\"academicDocumentId\"].filter((key) => !pm.collectionVariables.get(key));",
+                          "if (missing.length) {",
+                          "  console.warn(`Missing ${missing.join(', ')}. Set the variable manually or run the matching list/create request first.`);",
+                          "}"
+                        ]
+                      }
+                    },
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('status is 200', function () {",
+                          "  pm.response.to.have.status(200);",
+                          "});"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{adminAccessToken}}",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/v1/admin/academic/documents/{{academicDocumentId}}/restore",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "v1",
+                        "admin",
+                        "academic",
+                        "documents",
+                        "{{academicDocumentId}}",
+                        "restore"
+                      ]
+                    }
+                  },
+                  "response": []
+                }
+              ]
             }
           ]
         },

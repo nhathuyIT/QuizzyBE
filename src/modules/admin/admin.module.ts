@@ -1,6 +1,15 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import {
+  AcademicDocument,
+  AcademicDocumentSchema,
+} from '../academic/schemas/academic-document.schema';
+import {
+  Department,
+  DepartmentSchema,
+} from '../academic/schemas/department.schema';
+import { Subject, SubjectSchema } from '../academic/schemas/subject.schema';
 import { Card, CardSchema } from '../card/schemas/card.schema';
 import { Deck, DeckSchema } from '../deck/schemas/deck.schema';
 import {
@@ -19,6 +28,7 @@ import {
   AdminAuditLog,
   AdminAuditLogSchema,
 } from './schemas/admin-audit-log.schema';
+import { AdminAcademicController } from './admin-academic.controller';
 
 @Module({
   imports: [
@@ -29,9 +39,12 @@ import {
       { name: StudySession.name, schema: StudySessionSchema },
       { name: CardReview.name, schema: CardReviewSchema },
       { name: AdminAuditLog.name, schema: AdminAuditLogSchema },
+      { name: Department.name, schema: DepartmentSchema },
+      { name: Subject.name, schema: SubjectSchema },
+      { name: AcademicDocument.name, schema: AcademicDocumentSchema },
     ]),
   ],
-  controllers: [AdminController],
+  controllers: [AdminController, AdminAcademicController],
   providers: [AdminRepository, AdminService, RolesGuard],
 })
 export class AdminModule {}

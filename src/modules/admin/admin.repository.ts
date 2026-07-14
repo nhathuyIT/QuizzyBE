@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { ClientSession, Model, Types } from 'mongoose';
+import { ClientSession, Model, PipelineStage, Types } from 'mongoose';
 import {
   AdminAuditLog,
   AdminAuditLogDocument,
@@ -16,8 +16,23 @@ import {
   CardReview,
   CardReviewDocument,
 } from '../study/schemas/card-review.schema';
+import {
+  AcademicDocument,
+  AcademicDocumentDoc,
+} from '../academic/schemas/academic-document.schema';
+import {
+  Department,
+  DepartmentDocument,
+} from '../academic/schemas/department.schema';
+import { Subject, SubjectDocument } from '../academic/schemas/subject.schema';
 
 type PageResult<T> = { data: T[]; itemCount: number };
+export type AdminAuditTargetType =
+  | 'user'
+  | 'deck'
+  | 'academic_department'
+  | 'academic_subject'
+  | 'academic_document';
 export type AdminUserRecord = Record<string, unknown> & {
   role?: 'student' | 'teacher' | 'admin';
   status?: 'active' | 'suspended';
@@ -26,6 +41,17 @@ export type AdminUserRecord = Record<string, unknown> & {
 export type AdminDeckRecord = Record<string, unknown> & {
   moderationStatus?: 'active' | 'hidden';
   deletedAt?: Date;
+};
+export type AdminAcademicDepartmentRecord = Record<string, unknown> & {
+  isActive?: boolean;
+};
+export type AdminAcademicSubjectRecord = Record<string, unknown> & {
+  departmentId?: Types.ObjectId;
+  isActive?: boolean;
+};
+export type AdminAcademicDocumentRecord = Record<string, unknown> & {
+  status?: 'pending' | 'active' | 'rejected' | 'archived';
+  subjectId?: Types.ObjectId;
 };
 type AdminResultRecord = Record<string, unknown>;
 type CountRow = { count: number };
@@ -84,6 +110,12 @@ export class AdminRepository {
     private readonly cardReviewModel: Model<CardReviewDocument>,
     @InjectModel(AdminAuditLog.name)
     private readonly auditLogModel: Model<AdminAuditLogDocument>,
+    @InjectModel(Department.name)
+    private readonly departmentModel: Model<DepartmentDocument>,
+    @InjectModel(Subject.name)
+    private readonly subjectModel: Model<SubjectDocument>,
+    @InjectModel(AcademicDocument.name)
+    private readonly academicDocumentModel: Model<AcademicDocumentDoc>,
   ) {}
 
   async getDashboardSummary(from: Date, to: Date) {
@@ -709,6 +741,172 @@ export class AdminRepository {
     };
   }
 
+  async findAcademicDepartments(
+    filter: Record<string, unknown>,
+    page: number,
+    take: number,
+  ): Promise<PageResult<unknown>> {
+    const [data, itemCount] = await Promise.all([
+      this.departmentModel
+        .find(filter)
+        .sort({ code: 1 })
+        .skip((page - 1) * take)
+        .limit(take)
+        .lean(),
+      this.departmentModel.countDocuments(filter),
+    ]);
+    return { data, itemCount };
+  }
+
+  findAcademicDepartmentById(
+    departmentId: string,
+  ): Promise<AdminAcademicDepartmentRecord | null> {
+    return this.departmentModel
+      .findById(departmentId)
+      .lean<AdminAcademicDepartmentRecord>()
+      .exec();
+  }
+
+  async createAcademicDepartment(
+    input: Record<string, unknown>,
+    session: ClientSession,
+  ): Promise<AdminAcademicDepartmentRecord> {
+    const [department] = await this.departmentModel.create([input], {
+      session,
+    });
+    return department.toObject() as unknown as AdminAcademicDepartmentRecord;
+  }
+
+  updateAcademicDepartment(
+    departmentId: string,
+    update: Record<string, unknown>,
+    session: ClientSession,
+  ): Promise<AdminAcademicDepartmentRecord | null> {
+    return this.departmentModel
+      .findByIdAndUpdate(departmentId, update, { new: true, session })
+      .lean<AdminAcademicDepartmentRecord>()
+      .exec();
+  }
+
+  async findAcademicSubjects(
+    filter: Record<string, unknown>,
+    page: number,
+    take: number,
+  ): Promise<PageResult<unknown>> {
+    const [data, itemCount] = await Promise.all([
+      this.subjectModel.aggregate<AdminResultRecord>([
+        { $match: filter },
+        { $sort: { semester: 1, code: 1 } },
+        { $skip: (page - 1) * take },
+        { $limit: take },
+        {
+          $lookup: {
+            from: 'departments',
+            localField: 'departmentId',
+            foreignField: '_id',
+            as: 'department',
+          },
+        },
+        { $unwind: { path: '$department', preserveNullAndEmptyArrays: true } },
+      ]),
+      this.subjectModel.countDocuments(filter),
+    ]);
+    return { data, itemCount };
+  }
+
+  findAcademicSubjectById(
+    subjectId: string,
+  ): Promise<AdminAcademicSubjectRecord | null> {
+    return this.subjectModel
+      .findById(subjectId)
+      .lean<AdminAcademicSubjectRecord>()
+      .exec();
+  }
+
+  async createAcademicSubject(
+    input: Record<string, unknown>,
+    session: ClientSession,
+  ): Promise<AdminAcademicSubjectRecord> {
+    const [subject] = await this.subjectModel.create([input], {
+      session,
+    });
+    return subject.toObject() as unknown as AdminAcademicSubjectRecord;
+  }
+
+  updateAcademicSubject(
+    subjectId: string,
+    update: Record<string, unknown>,
+    session: ClientSession,
+  ): Promise<AdminAcademicSubjectRecord | null> {
+    return this.subjectModel
+      .findByIdAndUpdate(subjectId, update, { new: true, session })
+      .lean<AdminAcademicSubjectRecord>()
+      .exec();
+  }
+
+  async incrementAcademicSubjectDocumentCount(
+    subjectId: string,
+    amount: number,
+    session: ClientSession,
+  ): Promise<void> {
+    await this.subjectModel
+      .updateOne(
+        { _id: new Types.ObjectId(subjectId) },
+        { $inc: { documentCount: amount } },
+        { session },
+      )
+      .exec();
+  }
+
+  async findAcademicDocuments(
+    filter: Record<string, unknown>,
+    page: number,
+    take: number,
+    departmentId?: string,
+  ): Promise<PageResult<unknown>> {
+    const basePipeline = this.buildAcademicDocumentPipeline(
+      filter,
+      departmentId,
+    );
+    const [data, countRows] = await Promise.all([
+      this.academicDocumentModel.aggregate<AdminResultRecord>([
+        ...basePipeline,
+        { $sort: { createdAt: -1 } },
+        { $skip: (page - 1) * take },
+        { $limit: take },
+        ...this.academicDocumentOwnerLookupStages(),
+      ]),
+      this.academicDocumentModel.aggregate<CountRow>([
+        ...basePipeline,
+        { $count: 'count' },
+      ]),
+    ]);
+    return { data, itemCount: countRows[0]?.count ?? 0 };
+  }
+
+  async findAcademicDocumentById(
+    documentId: string,
+  ): Promise<AdminAcademicDocumentRecord | null> {
+    const rows =
+      await this.academicDocumentModel.aggregate<AdminAcademicDocumentRecord>([
+        { $match: { _id: new Types.ObjectId(documentId) } },
+        ...this.academicDocumentLookupStages(),
+        ...this.academicDocumentOwnerLookupStages(),
+      ]);
+    return rows[0] ?? null;
+  }
+
+  updateAcademicDocument(
+    documentId: string,
+    update: Record<string, unknown>,
+    session: ClientSession,
+  ): Promise<AdminAcademicDocumentRecord | null> {
+    return this.academicDocumentModel
+      .findByIdAndUpdate(documentId, update, { new: true, session })
+      .lean<AdminAcademicDocumentRecord>()
+      .exec();
+  }
+
   async findAuditLogs(
     filter: Record<string, unknown>,
     page: number,
@@ -745,7 +943,7 @@ export class AdminRepository {
     input: {
       adminId: string;
       action: string;
-      targetType: 'user' | 'deck';
+      targetType: AdminAuditTargetType;
       targetId: string;
       metadata?: Record<string, unknown>;
     },
@@ -762,6 +960,80 @@ export class AdminRepository {
       { session },
     );
     return log;
+  }
+
+  private buildAcademicDocumentPipeline(
+    filter: Record<string, unknown>,
+    departmentId?: string,
+  ): PipelineStage[] {
+    const pipeline: PipelineStage[] = [{ $match: filter }];
+
+    if (departmentId) {
+      pipeline.push(...this.academicDocumentLookupStages());
+      pipeline.push({
+        $match: {
+          'subject.departmentId': new Types.ObjectId(departmentId),
+        },
+      });
+      return pipeline;
+    }
+
+    pipeline.push(...this.academicDocumentLookupStages());
+    return pipeline;
+  }
+
+  private academicDocumentLookupStages(): PipelineStage[] {
+    return [
+      {
+        $lookup: {
+          from: 'subjects',
+          localField: 'subjectId',
+          foreignField: '_id',
+          as: 'subject',
+        },
+      },
+      { $unwind: { path: '$subject', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'departments',
+          localField: 'subject.departmentId',
+          foreignField: '_id',
+          as: 'department',
+        },
+      },
+      { $unwind: { path: '$department', preserveNullAndEmptyArrays: true } },
+    ];
+  }
+
+  private academicDocumentOwnerLookupStages(): PipelineStage[] {
+    return [
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'uploadedBy',
+          foreignField: '_id',
+          as: 'uploader',
+        },
+      },
+      { $unwind: { path: '$uploader', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'reviewedBy',
+          foreignField: '_id',
+          as: 'reviewer',
+        },
+      },
+      { $unwind: { path: '$reviewer', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          'uploader.passwordHash': 0,
+          'uploader.preferences': 0,
+          'reviewer.passwordHash': 0,
+          'reviewer.preferences': 0,
+        },
+      },
+    ];
   }
 
   private async countActiveUsers(from: Date, to: Date) {

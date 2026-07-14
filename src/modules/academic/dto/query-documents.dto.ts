@@ -30,7 +30,7 @@ export class QueryDocumentsDto {
   @IsOptional()
   fileType?: AcademicDocumentFileType;
 
-  @IsIn(['active', 'archived', 'all'])
+  @IsIn(['pending', 'active', 'rejected', 'archived', 'all'])
   @IsOptional()
   status?: AcademicDocumentStatus | 'all';
 

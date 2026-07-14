@@ -8,7 +8,11 @@ export type AcademicDocumentFileType =
   | 'pptx'
   | 'xlsx'
   | 'other';
-export type AcademicDocumentStatus = 'active' | 'archived';
+export type AcademicDocumentStatus =
+  | 'pending'
+  | 'active'
+  | 'rejected'
+  | 'archived';
 
 @Schema({ collection: 'academic_documents', timestamps: true })
 export class AcademicDocument {
@@ -52,8 +56,25 @@ export class AcademicDocument {
   @Prop({ required: true, trim: true })
   storagePath!: string;
 
-  @Prop({ default: 'active', enum: ['active', 'archived'], index: true })
+  @Prop({
+    default: 'pending',
+    enum: ['pending', 'active', 'rejected', 'archived'],
+    index: true,
+  })
   status!: AcademicDocumentStatus;
+
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'User',
+    index: true,
+  })
+  reviewedBy?: Types.ObjectId;
+
+  @Prop()
+  reviewedAt?: Date;
+
+  @Prop({ trim: true, maxlength: 500 })
+  reviewNote?: string;
 
   @Prop({ default: 0 })
   downloadCount!: number;
@@ -67,6 +88,7 @@ export const AcademicDocumentSchema =
 
 AcademicDocumentSchema.index({ subjectId: 1, createdAt: -1 });
 AcademicDocumentSchema.index({ uploadedBy: 1, createdAt: -1 });
+AcademicDocumentSchema.index({ status: 1, createdAt: -1 });
 AcademicDocumentSchema.index({
   title: 'text',
   description: 'text',

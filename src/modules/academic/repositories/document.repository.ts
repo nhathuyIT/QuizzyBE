@@ -54,7 +54,7 @@ export class DocumentRepository {
     });
 
     if (!query.status) {
-      filter.status = 'active';
+      filter.status = { $ne: 'archived' };
     }
 
     return this.findPaginated(filter, query);
@@ -104,7 +104,7 @@ export class DocumentRepository {
       filter.fileType = query.fileType;
     }
 
-    if (query.status && query.status !== 'all') {
+    if (!('status' in baseFilter) && query.status && query.status !== 'all') {
       filter.status = query.status;
     }
 

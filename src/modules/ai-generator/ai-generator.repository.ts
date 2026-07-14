@@ -93,6 +93,18 @@ export class AiGeneratorRepository {
       .exec();
   }
 
+  async markJobRunningIfQueued(
+    id: string,
+  ): Promise<AiGenerationJobDocument | null> {
+    return this.aiGenerationJobModel
+      .findOneAndUpdate(
+        { _id: new Types.ObjectId(id), status: 'queued' },
+        { status: 'running' },
+        { new: true },
+      )
+      .exec();
+  }
+
   async markJobDone(
     id: string,
     params: {

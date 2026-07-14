@@ -27,6 +27,29 @@ import { SendMessageDto } from './dto/send-message.dto';
 import { UpdateConversationDto } from './dto/update-conversation.dto';
 
 @Controller('v1/chatbot')
+export class ChatbotHelpController {
+  @Get('generate/pdf')
+  getGeneratePdfUsage() {
+    return {
+      message:
+        'PDF flashcard generation is available. Send a POST request with multipart/form-data to use it.',
+      method: 'POST',
+      path: '/v1/chatbot/generate/pdf',
+      auth: 'Bearer access token required',
+      contentType: 'multipart/form-data',
+      fields: {
+        file: 'PDF file, required',
+        title: 'Deck title, required',
+        cardCount: 'Optional number from 5 to 30',
+        difficulty: 'Optional: easy, medium, or hard',
+        language: 'Optional output language',
+        conversationId: 'Optional MongoDB conversation id',
+      },
+    };
+  }
+}
+
+@Controller('v1/chatbot')
 @UseGuards(JwtAuthGuard)
 export class ChatbotController {
   constructor(private readonly chatbotService: ChatbotService) {}

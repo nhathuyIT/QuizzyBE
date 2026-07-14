@@ -53,6 +53,7 @@ import {
 import { ChatConversationDocument } from './schemas/chat-conversation.schema';
 import { ChatMessageDocument } from './schemas/chat-message.schema';
 import { AcademicDocumentStorageService } from './services/academic-document-storage.service';
+import { FlashcardGenerationRunnerService } from './services/flashcard-generation-runner.service';
 import { PdfParserService } from './services/pdf-parser.service';
 
 const MAX_ACADEMIC_DOCUMENT_FILE_SIZE = 10 * 1024 * 1024;
@@ -78,6 +79,7 @@ export class ChatbotService {
     private readonly pdfParserService: PdfParserService,
     private readonly documentService: DocumentService,
     private readonly academicDocumentStorageService: AcademicDocumentStorageService,
+    private readonly flashcardGenerationRunner: FlashcardGenerationRunnerService,
     private readonly configService: ConfigService,
     @InjectQueue(FLASHCARD_GENERATE_QUEUE)
     private readonly generateQueue: Queue<FlashcardGenerateJobData>,
@@ -89,7 +91,10 @@ export class ChatbotService {
     createConversationDto: CreateConversationDto,
     userId: string,
   ) {
-    if (createConversationDto.deckId && createConversationDto.academicDocumentId) {
+    if (
+      createConversationDto.deckId &&
+      createConversationDto.academicDocumentId
+    ) {
       throw new BadRequestException(
         'Choose either deckId or academicDocumentId for a conversation',
       );
@@ -292,16 +297,24 @@ export class ChatbotService {
       throw new BadRequestException('Only PDF files are supported');
     }
 
-    const content = this.truncateInput(
-      await this.pdfParserService.extractText(file.buffer),
-    );
+    if (file.size > MAX_ACADEMIC_DOCUMENT_FILE_SIZE) {
+      throw new BadRequestException('PDF must be 10MB or smaller');
+    }
+
+    const uploadedFile =
+      await this.academicDocumentStorageService.uploadChatbotPdf(
+        file.buffer,
+        file.originalname,
+        userId,
+      );
 
     return this.queueFlashcardGeneration(
       {
         type: 'pdf',
         title: generateDto.title,
-        content,
-        fileUrl: file.originalname,
+        fileUrl: uploadedFile.fileUrl,
+        storagePath: uploadedFile.storagePath,
+        fileType: 'pdf',
         cardCount: generateDto.cardCount,
         difficulty: generateDto.difficulty,
         language: generateDto.language,
@@ -393,7 +406,7 @@ export class ChatbotService {
     params: {
       type: FlashcardGenerateSourceType;
       title: string;
-      content: string;
+      content?: string;
       fileUrl?: string;
       storagePath?: string;
       fileType?: string;
@@ -452,30 +465,32 @@ export class ChatbotService {
       );
 
     let bullJobId: string | undefined;
+    const jobData: FlashcardGenerateJobData = {
+      jobId: job._id.toString(),
+      sourceId: source._id.toString(),
+      userId,
+      title: params.title,
+      content: params.content,
+      fileUrl: params.fileUrl,
+      storagePath: params.storagePath,
+      sourceType: params.type,
+      academicDocumentId: params.academicDocumentId,
+      subjectId: params.subjectId,
+      deckDescription: params.deckDescription,
+      deckTags: params.deckTags,
+      options,
+      conversationId: params.conversationId,
+    };
 
     try {
-      const bullJob = await this.generateQueue.add(
-        FLASHCARD_GENERATE_JOB,
-        {
-          jobId: job._id.toString(),
-          sourceId: source._id.toString(),
-          userId,
-          title: params.title,
-          content: params.content,
-          sourceType: params.type,
-          academicDocumentId: params.academicDocumentId,
-          subjectId: params.subjectId,
-          deckDescription: params.deckDescription,
-          deckTags: params.deckTags,
-          options,
-          conversationId: params.conversationId,
-        },
-        {
+      const bullJob = await this.withTimeout(
+        this.generateQueue.add(FLASHCARD_GENERATE_JOB, jobData, {
           attempts: 3,
           backoff: { type: 'exponential', delay: 5000 },
           removeOnComplete: { age: 86400, count: 1000 },
           removeOnFail: { age: 604800 },
-        },
+        }),
+        this.getPositiveIntConfig('AI_QUEUE_ADD_TIMEOUT_MS', 5000),
       );
 
       bullJobId = bullJob.id;
@@ -483,16 +498,11 @@ export class ChatbotService {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown queue error';
 
-      this.logger.error(`Could not queue flashcard generation: ${errorMessage}`);
-      await this.aiGeneratorRepository.updateJobStatus(
-        job._id.toString(),
-        'failed',
-        'Could not start flashcard generation',
+      this.logger.warn(
+        `Could not queue flashcard generation in Redis; using local runner: ${errorMessage}`,
       );
-
-      throw new ServiceUnavailableException(
-        'Could not start flashcard generation',
-      );
+      bullJobId = `local-${job._id.toString()}`;
+      this.startLocalFlashcardGeneration(jobData);
     }
 
     if (params.conversationId) {
@@ -516,6 +526,42 @@ export class ChatbotService {
       bullJobId,
       status: job.status,
     };
+  }
+
+  private startLocalFlashcardGeneration(data: FlashcardGenerateJobData) {
+    setImmediate(() => {
+      void this.flashcardGenerationRunner.run(data).catch((error) => {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown generation error';
+
+        this.logger.error(
+          `Local flashcard generation failed for job ${data.jobId}: ${errorMessage}`,
+        );
+      });
+    });
+  }
+
+  private async withTimeout<T>(
+    promise: Promise<T>,
+    timeoutMs: number,
+  ): Promise<T> {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    try {
+      return await Promise.race([
+        promise,
+        new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(
+            () => reject(new Error('Queue add timed out')),
+            timeoutMs,
+          );
+        }),
+      ]);
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    }
   }
 
   private async expireStaleActiveJobs(userId: string) {
@@ -653,9 +699,10 @@ export class ChatbotService {
   }
 
   private async getAcademicDocumentForChat(academicDocumentId: string) {
-    const result = await this.documentService.findActiveDocumentForGeneration(
-      academicDocumentId,
-    );
+    const result =
+      await this.documentService.findActiveDocumentForGeneration(
+        academicDocumentId,
+      );
 
     if (result.document.fileType !== 'pdf') {
       throw new BadRequestException(

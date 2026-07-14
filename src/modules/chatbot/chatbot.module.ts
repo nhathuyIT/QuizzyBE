@@ -7,7 +7,7 @@ import { AcademicModule } from '../academic/academic.module';
 import { AiGeneratorModule } from '../ai-generator/ai-generator.module';
 import { DeckModule } from '../deck/deck.module';
 import { FLASHCARD_GENERATE_QUEUE } from './constants/chatbot.constants';
-import { ChatbotController } from './chatbot.controller';
+import { ChatbotController, ChatbotHelpController } from './chatbot.controller';
 import { ChatbotRepository } from './chatbot.repository';
 import { ChatbotService } from './chatbot.service';
 import { AI_PROVIDER } from './interfaces/ai-provider.interface';
@@ -19,6 +19,7 @@ import {
 } from './schemas/chat-conversation.schema';
 import { ChatMessage, ChatMessageSchema } from './schemas/chat-message.schema';
 import { AcademicDocumentStorageService } from './services/academic-document-storage.service';
+import { FlashcardGenerationRunnerService } from './services/flashcard-generation-runner.service';
 import { PdfParserService } from './services/pdf-parser.service';
 
 @Module({
@@ -68,11 +69,12 @@ import { PdfParserService } from './services/pdf-parser.service';
     AcademicModule,
     DeckModule,
   ],
-  controllers: [ChatbotController],
+  controllers: [ChatbotHelpController, ChatbotController],
   providers: [
     ChatbotService,
     ChatbotRepository,
     AcademicDocumentStorageService,
+    FlashcardGenerationRunnerService,
     PdfParserService,
     FlashcardGenerateProcessor,
     GeminiProvider,

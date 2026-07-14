@@ -7,7 +7,9 @@ export interface FlashcardGenerateJobData {
   sourceId: string;
   userId: string;
   title: string;
-  content: string;
+  content?: string;
+  fileUrl?: string;
+  storagePath?: string;
   sourceType?: FlashcardGenerateSourceType;
   academicDocumentId?: string;
   subjectId?: string;

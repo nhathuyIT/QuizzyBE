@@ -2795,6 +2795,80 @@
           "response": []
         },
         {
+          "name": "Chatbot - Generate Flashcards From Academic Document",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const missing = [\"academicDocumentId\"].filter((key) => !pm.collectionVariables.get(key));",
+                  "if (missing.length) {",
+                  "  console.warn(`Missing ${missing.join(', ')}. Run Academic Documents > Create Document Metadata first or set the variable manually.`);",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201 or 200', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json?.data?.jobId) pm.collectionVariables.set('aiJobId', json.data.jobId);",
+                  "if (json?.data?.sourceId) pm.collectionVariables.set('aiSourceId', json.data.sourceId);",
+                  "",
+                  "pm.test('aiJobId is saved', function () {",
+                  "  pm.expect(pm.collectionVariables.get('aiJobId')).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentId\": \"{{academicDocumentId}}\",\n  \"title\": \"Academic Document AI Deck\",\n  \"cardCount\": 5,\n  \"difficulty\": \"medium\",\n  \"language\": \"vi\",\n  \"conversationId\": \"{{chatConversationId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/chatbot/generate/academic-document",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "chatbot",
+                "generate",
+                "academic-document"
+              ]
+            },
+            "description": "Queues AI flashcard generation from an existing academic document. Run Academic Documents > Create Document Metadata first or set academicDocumentId manually. Requires Redis and Gemini. Saves aiJobId when returned."
+          },
+          "response": []
+        },
+        {
           "name": "Chatbot - Get Generate Job Status",
           "event": [
             {
@@ -2837,7 +2911,7 @@
                 "{{aiJobId}}"
               ]
             },
-            "description": "Poll this after generate/text or generate/pdf. When status is done, generatedDeckId is saved."
+            "description": "Poll this after generate/text, generate/pdf, or generate/academic-document. When status is done, generatedDeckId is saved."
           },
           "response": []
         },
